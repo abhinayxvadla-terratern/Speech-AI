@@ -108,33 +108,33 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
           {/* Performance Summary / Recaps */}
           {isPractice ? (
             <div className="space-y-3">
-              {/* German Recap Shown FIRST for Practice mode */}
-              {hasGermanRecap && (
-                <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-xs text-slate-700 leading-relaxed space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[#00215C] font-bold">
-                    <span className="text-sm">🇩🇪</span>
-                    <span className="uppercase tracking-wider font-extrabold text-[11px]">German Summary</span>
-                  </div>
-                  <p className="text-slate-800 leading-relaxed font-normal">{recap.summary_text_de}</p>
-                </div>
-              )}
-
-              {/* English Recap Shown BENEATH German */}
-              <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-xs text-slate-700 leading-relaxed space-y-1.5">
+              {/* Primary English Performance & Conversation Overview */}
+              <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/90 text-xs text-slate-700 leading-relaxed space-y-1.5 shadow-2xs">
                 <div className="flex items-center gap-1.5 text-[#00215C] font-bold">
                   <span className="text-sm">🇬🇧</span>
-                  <span className="uppercase tracking-wider font-extrabold text-[11px]">English Summary</span>
+                  <span className="uppercase tracking-wider font-extrabold text-[11px]">Conversation Recap & Evaluation</span>
                 </div>
-                <p className="text-slate-800 leading-relaxed font-normal">
+                <p className="text-slate-800 leading-relaxed font-normal text-xs sm:text-[13px]">
                   {recap.summary_text_en || recap.summary_text || recap.summaryText}
                 </p>
               </div>
+
+              {/* German Transcript Synopsis (Secondary) */}
+              {hasGermanRecap && (
+                <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100/80 text-xs text-slate-700 leading-relaxed space-y-1">
+                  <div className="flex items-center gap-1.5 text-[#255CC1] font-bold">
+                    <span className="text-sm">🇩🇪</span>
+                    <span className="uppercase tracking-wider font-extrabold text-[10px]">German Dialogue Summary</span>
+                  </div>
+                  <p className="text-slate-700 leading-relaxed font-normal text-[11px]">{recap.summary_text_de}</p>
+                </div>
+              )}
             </div>
           ) : (
-            /* Learn Sessions: English summary only */
-            <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-xs text-slate-700 leading-relaxed space-y-1">
+            /* Learn Sessions: English summary */
+            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/90 text-xs text-slate-700 leading-relaxed space-y-1 shadow-2xs">
               <p className="font-bold text-[#00215C] uppercase tracking-wider text-[11px]">Performance Summary</p>
-              <p className="text-slate-800 leading-relaxed font-normal">
+              <p className="text-slate-800 leading-relaxed font-normal text-xs sm:text-[13px]">
                 {recap.summary_text_en || recap.summary_text || recap.summaryText}
               </p>
             </div>
@@ -144,7 +144,7 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
           {recap.mistakes && recap.mistakes.length > 0 && (
             <div className="space-y-2.5">
               <p className="text-xs font-bold text-[#00215C] uppercase tracking-wider">
-                Diagnostic Insights:
+                German Corrections & Guidance:
               </p>
               <div className="space-y-2">
                 {recap.mistakes.map((m, i) => {
@@ -159,7 +159,7 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                   );
 
                   return (
-                    <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-2">
+                    <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-2 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-[#00215C]">{m.category}</span>
                       </div>
@@ -179,15 +179,15 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                         {hasCorrection && (
                           <div className="p-2 rounded-lg bg-white border border-emerald-100 flex items-start gap-1.5 shadow-2xs">
                             <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-50 shrink-0">
-                              Correction:
+                              Correct German:
                             </span>
                             <div className="text-xs break-words font-normal">
                               <span className="font-bold text-emerald-900">
                                 {correctedVersion}
                               </span>
                               {isPractice && m.correction_en && m.correction_de && m.correction_en !== m.correction_de && (
-                                <span className="text-slate-500 italic block mt-0.5">
-                                  {m.correction_en}
+                                <span className="text-slate-600 font-normal italic block mt-0.5">
+                                  Meaning: {m.correction_en}
                                 </span>
                               )}
                             </div>

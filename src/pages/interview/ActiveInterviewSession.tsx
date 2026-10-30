@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useActiveSession } from '../../contexts/ActiveSessionContext';
@@ -7,11 +7,13 @@ import { generateDiagnosticRecap, DiagnosticRecapResult } from '../../services/d
 import { recordSessionCompletionInStreak } from '../../lib/streaks';
 import { PressureMode, InterviewSampleQuestion, ExamSpeakingPromptText } from '../../lib/database.types';
 import { PRESSURE_MODES } from '../../constants/interview';
+import { getFallbackInterviewQuestions } from '../../constants/interviewFallbacks';
 import { SessionDetailModal } from '../../components/SessionDetailModal';
 import { useAutoTurnVAD } from '../../services/voice/useAutoTurnVAD';
 import { AutoTurnStatusDock } from '../../components/voice/AutoTurnStatusDock';
 import { 
   ArrowLeft, 
+  CheckCircle2,
   Loader2, 
   Volume2, 
   AlertCircle,
@@ -23,6 +25,16 @@ import {
   Briefcase
 } from 'lucide-react';
 import { AppLogo } from '../../components/common/AppLogo';
+
+const formatTimestamp = (ts?: string) => {
+  if (!ts) return '';
+  try {
+    const d = new Date(ts);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+};
 
 interface ActiveInterviewSessionProps {
   interviewTypeName: string;
@@ -78,7 +90,6 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState<boolean>(false);
   const [isRepeatedMistakePause, setIsRepeatedMistakePause] = useState<boolean>(false);
-  const [showSampleQuestions, setShowSampleQuestions] = useState<boolean>(false);
 
   // Timer State
   const [secondsElapsed, setSecondsElapsed] = useState<number>(0);
@@ -147,6 +158,19 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
+  const effectiveQuestions: InterviewSampleQuestion[] = useMemo(() => {
+    if (Array.isArray(sampleQuestions) && sampleQuestions.length > 0) {
+      return sampleQuestions;
+    }
+    return getFallbackInterviewQuestions(interviewTypeName);
+  }, [sampleQuestions, interviewTypeName]);
+
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const currentQuestionIndexRef = useRef<number>(0);
+  currentQuestionIndexRef.current = currentQuestionIndex;
+
+  const currentQuestion = effectiveQuestions[currentQuestionIndex] || effectiveQuestions[0];
+
   useEffect(() => {
     turnsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [turns, voiceState]);
@@ -201,6 +225,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           pressureMode: pressureMode,
           domain: profile?.primary_domain || 'Healthcare',
           sub_branch: profile?.primary_subbranch || 'General',
+          targetPhrase: currentQuestion.german,
           durationMinutes: durationMinutes,
           isOpenInterview: isOpenInterview,
           cefr_level: isOpenInterview ? undefined : (profile?.cefr_level || 'B1'),
@@ -231,8 +256,14 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
         }
 
         // 5. Register transcript listener
+        let lastTurnWasUser = false;
         cleanupTranscript = voiceAdapter.onTranscript(handle, async (newTurn) => {
           if (!active) return;
+
+          if (newTurn.speaker === 'user') {
+            lastTurnWasUser = true;
+          }
+
           setTurns((prev) => {
             const existingIdx = prev.findIndex(
               (t) => t === newTurn || (t.timestamp === newTurn.timestamp && t.speaker === newTurn.speaker)
@@ -257,67 +288,53 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
             setTimeout(() => {
               if (active) handleFinishRef.current();
             }, 2500);
+            return;
+          }
+
+          // Advance to next question after coach finishes feedback in Learn mode
+          if (mode === 'learn' && newTurn.speaker === 'agent' && lastTurnWasUser) {
+            lastTurnWasUser = false;
+            const curIdx = currentQuestionIndexRef.current;
+            if (curIdx < effectiveQuestions.length - 1) {
+              const nextIdx = curIdx + 1;
+              currentQuestionIndexRef.current = nextIdx;
+              setCurrentQuestionIndex(nextIdx);
+              const nextQ = effectiveQuestions[nextIdx];
+              if (handle && handle.context) {
+                handle.context.targetPhrase = nextQ.german;
+              }
+              const nextPrompt = `The next interview question is: "${nextQ.german}" — which means "${nextQ.english}". How would you answer this? Please respond in German.`;
+              setTimeout(() => {
+                if (active) {
+                  voiceAdapter.speak(handle, nextPrompt).catch(console.warn);
+                }
+              }, 1200);
+            } else {
+              // Completed all questions in the interview workout!
+              setTimeout(() => {
+                if (active) handleFinishRef.current();
+              }, 2000);
+            }
           }
         });
 
         // 6. Proactive AI Guidance: In all interview sessions, the interviewer speaks first and asks the first question
         if (!hasSpokenOpenerRef.current && (!initialTranscript || initialTranscript.length === 0)) {
           hasSpokenOpenerRef.current = true;
-          const firstQuestion = sampleQuestions[0]?.german || 'Können Sie sich bitte kurz vorstellen und Ihren Werdegang beschreiben?';
+          const userName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
+          const firstQuestion = currentQuestion.german;
+
           setTimeout(() => {
             if (!active) return;
             if (isExamMode && examPromptText) {
-              const segments = [
-                {
-                  text: `Willkommen zur mündlichen Prüfung. ${examPromptText.german || firstQuestion}`,
-                  lang: 'de' as const,
-                },
-              ];
-              if (voiceAdapter.speakSegments) {
-                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
-              } else {
-                voiceAdapter.speak(handle, segments[0].text).catch((e) => console.warn('Opener speak notice:', e));
-              }
+              const opener = `Willkommen zur mündlichen Prüfung. ${examPromptText.german || firstQuestion}`;
+              voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             } else if (mode === 'learn') {
-              const segments = [
-                {
-                  text: `Welcome to your interview coaching for ${interviewTypeName}. The interviewer is about to ask an essential question. Listen carefully:`,
-                  lang: 'en' as const,
-                },
-                {
-                  text: firstQuestion,
-                  lang: 'de' as const,
-                },
-                {
-                  text: `How would you answer this? Please respond in German.`,
-                  lang: 'en' as const,
-                },
-              ];
-              if (voiceAdapter.speakSegments) {
-                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
-              } else {
-                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
-              }
+              const opener = `Welcome ${userName}! Today we are preparing for your interview: ${interviewTypeName}. I will guide you through key questions one by one. The first question is: "${currentQuestion.german}" — which means "${currentQuestion.english}". How would you answer this? Please respond in German.`;
+              voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             } else {
-              const segments = [
-                {
-                  text: `Welcome to your practice interview for ${interviewTypeName}. From this moment on, the interview will be conducted entirely in German. Let's begin.`,
-                  lang: 'en' as const,
-                },
-                {
-                  text: `Guten Tag! Lassen Sie uns direkt beginnen: ${firstQuestion}`,
-                  lang: 'de' as const,
-                },
-                {
-                  text: `Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`,
-                  lang: 'de' as const,
-                },
-              ];
-              if (voiceAdapter.speakSegments) {
-                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
-              } else {
-                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
-              }
+              const opener = `Welcome ${userName}! This is your practice interview for ${interviewTypeName}. From this moment on, the interview will be conducted entirely in German. Let's begin! Guten Tag! Lassen Sie uns direkt beginnen: ${firstQuestion}. Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`;
+              voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             }
           }, 350);
         }
@@ -480,85 +497,112 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
         </button>
       </header>
 
-      {/* Interview Brief Stage Card */}
-      <div className="mb-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-            Simulation Context & Setup
-          </span>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/60">
-            {pressureMode} Pressure
-          </span>
-        </div>
-
-        {/* Exam Mode Prompt Banner */}
-        {isExamMode && examPromptText ? (
-          <div className="space-y-2">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
-                Official Exam Prompt / Aufgabenstellung:
+      {/* Question Stepper Stage (Learn Mode) */}
+      {mode === 'learn' && !isOpenInterview && currentQuestion && (
+        <div className="mb-4 p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-3 relative overflow-hidden animate-fadeIn">
+          {/* Stepper bar */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+              <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
+              Question {currentQuestionIndex + 1} of {effectiveQuestions.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (sessionHandle && voiceAdapter.speak) {
+                    voiceAdapter.speak(sessionHandle, currentQuestion.german).catch(console.warn);
+                  }
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#255CC1] text-[11px] font-bold transition-colors"
+                title="Listen to German question"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                <span>Listen</span>
+              </button>
+              <span className="font-semibold text-slate-500 text-[11px]">
+                {Math.round(((currentQuestionIndex + 1) / effectiveQuestions.length) * 100)}%
               </span>
-              <p className="text-xs font-bold text-[#00215C]">{examPromptText.german}</p>
-              <p className="text-[11px] text-slate-500 italic mt-0.5 font-normal">{examPromptText.english}</p>
             </div>
-
-            {examPromptText.bullet_points && examPromptText.bullet_points.length > 0 && (
-              <div className="p-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                  Leitpunkte / Points to Cover:
-                </span>
-                <ul className="list-disc list-inside text-xs text-slate-700 space-y-0.5 font-normal">
-                  {examPromptText.bullet_points.map((bp, i) => (
-                    <li key={i}>{bp}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
-        ) : mode === 'learn' && !isOpenInterview ? (
-          /* Learn Mode Briefing */
-          <div className="space-y-2.5">
-            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
-              {description}
+
+          <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-full bg-[#255CC1] rounded-full transition-all duration-300"
+              style={{ width: `${((currentQuestionIndex + 1) / effectiveQuestions.length) * 100}%` }}
+            />
+          </div>
+
+          {/* Large German Question */}
+          <div className="py-2 text-center sm:text-left">
+            <p className="font-heading font-extrabold text-xl sm:text-2xl text-[#00215C] leading-tight tracking-tight">
+              &ldquo;{currentQuestion.german}&rdquo;
             </p>
-
-            {sampleQuestions && sampleQuestions.length > 0 && (
-              <div className="pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowSampleQuestions(!showSampleQuestions)}
-                  className="text-xs font-bold text-[#255CC1] hover:underline flex items-center gap-1"
-                >
-                  <span>{showSampleQuestions ? 'Hide' : 'View'} Sample Questions & Guidance ({sampleQuestions.length})</span>
-                </button>
-
-                {showSampleQuestions && (
-                  <div className="mt-2 space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {sampleQuestions.map((q, idx) => (
-                      <div key={idx} className="p-3 rounded-xl bg-white border border-slate-200/80 text-xs space-y-1 shadow-2xs">
-                        <p className="font-bold text-[#00215C]">{idx + 1}. {q.german}</p>
-                        <p className="text-[11px] text-slate-500 italic font-normal">{q.english}</p>
-                        <p className="text-[11px] text-emerald-900 bg-emerald-50/80 p-2 rounded-lg border border-emerald-100 font-normal">
-                          <strong>Coverage note:</strong> {q.guidance}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <p className="text-xs sm:text-sm text-slate-600 font-medium italic mt-1.5">
+              &ldquo;{currentQuestion.english}&rdquo;
+            </p>
           </div>
-        ) : (
-          /* Practice Mode or Open Interview Note */
-          <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-            <HelpCircle className="w-4 h-4 text-[#255CC1] shrink-0" />
-            <span>
-              <strong>Professional Simulation:</strong> Respond with natural German workplace register (Sie). Comprehensive evaluation generated upon completion.
+
+          {/* Answering Guidance Note */}
+          {currentQuestion.guidance && (
+            <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-100 text-xs text-[#00215C]">
+              <span className="font-bold text-[10px] uppercase tracking-wider text-[#255CC1] block mb-0.5">
+                Strategic Guidance:
+              </span>
+              <p className="text-slate-700">{currentQuestion.guidance}</p>
+            </div>
+          )}
+
+          {/* Latest Feedback for Current Question if user has spoken */}
+          {(() => {
+            const latestUser = turns.slice().reverse().find((t) => t.speaker === 'user');
+            if (!latestUser || !latestUser.feedback_en) return null;
+            return (
+              <div className={`p-3 rounded-xl text-xs flex items-start gap-2 border animate-fadeIn ${
+                latestUser.isCorrect
+                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                  : 'bg-amber-50/80 border-amber-200 text-amber-900'
+              }`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${
+                  latestUser.isCorrect ? 'text-emerald-600' : 'text-amber-600'
+                }`} />
+                <div className="min-w-0">
+                  <p className="font-semibold">
+                    {latestUser.isCorrect ? 'Strong Response' : 'Coach Guidance & Feedback'}
+                  </p>
+                  <p className="text-[11px] mt-0.5 text-slate-700">
+                    {latestUser.feedback_en}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Practice Mode / Simulation Context Card */}
+      {(mode === 'practice' || isOpenInterview) && (
+        <div className="mb-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden animate-fadeIn">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
+              Professional German Interview Simulation
+            </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/60">
+              {pressureMode} Pacing
             </span>
           </div>
-        )}
-      </div>
+          <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
+            {description}
+          </p>
+          <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-600 font-medium">
+            <HelpCircle className="w-4 h-4 text-[#255CC1] shrink-0" />
+            <span>
+              <strong>100% German Interview:</strong> The simulation is conducted entirely in formal German (Sie). Respond spontaneously. Full diagnostic review in English will be provided at the end.
+            </span>
+          </div>
+        </div>
+      )}
 
       {errorMsg && (
         <div className="mb-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-2 shadow-xs animate-fadeIn">
@@ -617,10 +661,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
                         isUser ? 'text-blue-200' : 'text-slate-400'
                       }`}
                     >
-                      {new Date(turn.timestamp).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatTimestamp(turn.timestamp)}
                     </span>
                   </div>
                 </div>
@@ -671,7 +712,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           subtitle={`${interviewTypeName} • ${pressureMode} Pressure • ${mode === 'learn' ? 'Learn Session' : 'Practice Simulation'}`}
           mode={mode}
           recap={completedSummary}
-          actionButtonText={isRepeatedMistakePause ? "Review Completed • Exit" : "Continue to Interview Hub"}
+          actionButtonText={isRepeatedMistakePause ? "Review Completed • Exit" : "Continue to Interviews →"}
           onActionButtonClick={onCompleted}
           sessionId={dbSessionId}
           isRepeatedMistakePause={isRepeatedMistakePause}

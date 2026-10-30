@@ -20,6 +20,7 @@ import {
 
 import { useKillSwitch } from '../hooks/useKillSwitch';
 import { TabUnavailableBanner } from '../components/layout/TabUnavailableBanner';
+import { getFallbackScenarioPhrases } from '../constants/scenarioFallbacks';
 
 type ScenariosTrackTab = 'all' | 'domain' | 'daily_life';
 type ScenariosView = 'list' | 'detail' | 'session';
@@ -274,30 +275,38 @@ export const Scenarios: React.FC = () => {
             </p>
           </div>
 
-          {/* Target Key Phrases (if available) */}
-          {(selectedScenario.content as any)?.target_phrases?.length > 0 && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
-              <h4 className="text-xs font-bold text-[#00215C] uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-                <span>Essential Real-World Phrases</span>
-              </h4>
-              <div className="space-y-2">
-                {(selectedScenario.content as any).target_phrases.map((phrase: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="p-3.5 rounded-xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4 shadow-2xs"
-                  >
-                    <span className="font-bold text-xs sm:text-sm text-[#00215C]">
-                      {phrase.german}
-                    </span>
-                    <span className="text-xs text-slate-500 font-normal italic">
-                      "{phrase.english}"
-                    </span>
-                  </div>
-                ))}
+          {/* Target Key Phrases */}
+          {(() => {
+            const scenarioPhrases = (selectedScenario.content as any)?.target_phrases?.length > 0
+              ? (selectedScenario.content as any).target_phrases
+              : getFallbackScenarioPhrases(selectedScenario.title);
+
+            if (!scenarioPhrases || scenarioPhrases.length === 0) return null;
+
+            return (
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
+                <h4 className="text-xs font-bold text-[#00215C] uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
+                  <span>Essential Real-World Phrases ({scenarioPhrases.length})</span>
+                </h4>
+                <div className="space-y-2">
+                  {scenarioPhrases.map((phrase: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 rounded-xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4 shadow-2xs"
+                    >
+                      <span className="font-bold text-xs sm:text-sm text-[#00215C]">
+                        {phrase.german}
+                      </span>
+                      <span className="text-xs text-slate-500 font-normal italic">
+                        "{phrase.english}"
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* MODE SELECTOR */}
           <div className="space-y-2.5">

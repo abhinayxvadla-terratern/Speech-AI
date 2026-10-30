@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Scenario } from '../../lib/database.types';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,6 +23,17 @@ import {
   Compass
 } from 'lucide-react';
 import { AppLogo } from '../../components/common/AppLogo';
+import { getFallbackScenarioPhrases } from '../../constants/scenarioFallbacks';
+
+const formatTimestamp = (ts?: string) => {
+  if (!ts) return '';
+  try {
+    const d = new Date(ts);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+};
 
 interface ActiveScenarioSessionProps {
   scenario: Scenario;
@@ -43,7 +54,7 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
   onBack,
   onCompleted,
 }) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { setSessionActive } = useActiveSession();
 
   // Keep AppShell updated on immersive active session status
@@ -132,6 +143,21 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
+  const contentObj = (scenario.content as any) || {};
+  const targetPhrases: Array<{ german: string; english: string }> = useMemo(() => {
+    if (Array.isArray(contentObj.target_phrases) && contentObj.target_phrases.length > 0) {
+      return contentObj.target_phrases;
+    }
+    return getFallbackScenarioPhrases(scenario.title);
+  }, [contentObj, scenario.title]);
+
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState<number>(0);
+  const currentPhraseIndexRef = useRef<number>(0);
+  currentPhraseIndexRef.current = currentPhraseIndex;
+
+  const currentPhrase = targetPhrases[currentPhraseIndex] || targetPhrases[0];
+  const primaryTargetPhrase = currentPhrase.german;
+
   // Scroll to bottom when turns update
   useEffect(() => {
     turnsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -179,15 +205,12 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
         }
 
         // 2. Start Voice Adapter session
-        const contentObj = (scenario.content as any) || {};
-        const firstPhrase = contentObj.target_phrases?.[0]?.german;
-
         const handle = await voiceAdapter.startSession({
           tab: 'scenarios',
           mode: mode,
           scenarioType: scenario.title,
           domain: scenario.parent_domain || 'General',
-          targetPhrase: firstPhrase,
+          targetPhrase: primaryTargetPhrase,
           durationMinutes: durationMinutes,
         });
 
@@ -216,8 +239,15 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
         }
 
         // 5. Register transcript listener
+        let lastTurnWasUser = false;
+
         cleanupTranscript = voiceAdapter.onTranscript(handle, async (newTurn) => {
           if (!active) return;
+
+          if (newTurn.speaker === 'user') {
+            lastTurnWasUser = true;
+          }
+
           setTurns((prev) => {
             const existingIdx = prev.findIndex(
               (t) => t === newTurn || (t.timestamp === newTurn.timestamp && t.speaker === newTurn.speaker)
@@ -242,6 +272,33 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
             setTimeout(() => {
               if (active) handleFinishRef.current();
             }, 2500);
+            return;
+          }
+
+          // Advance to next phrase after coach finishes speaking feedback to a user turn in Learn mode
+          if (mode === 'learn' && newTurn.speaker === 'agent' && lastTurnWasUser) {
+            lastTurnWasUser = false;
+            const curIdx = currentPhraseIndexRef.current;
+            if (curIdx < targetPhrases.length - 1) {
+              const nextIdx = curIdx + 1;
+              currentPhraseIndexRef.current = nextIdx;
+              setCurrentPhraseIndex(nextIdx);
+              const nextPhrase = targetPhrases[nextIdx];
+              if (handle && handle.context) {
+                handle.context.targetPhrase = nextPhrase.german;
+              }
+              const nextPrompt = `The next phrase is: "${nextPhrase.german}" — which means "${nextPhrase.english}". Now, say it!`;
+              setTimeout(() => {
+                if (active) {
+                  voiceAdapter.speak(handle, nextPrompt).catch(console.warn);
+                }
+              }, 1200);
+            } else {
+              // All phrases in this workout completed! Wrap up and finish session
+              setTimeout(() => {
+                if (active) handleFinishRef.current();
+              }, 2000);
+            }
           }
         });
 
@@ -250,48 +307,13 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
           hasSpokenOpenerRef.current = true;
           setTimeout(() => {
             if (!active) return;
+            const userName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
             if (mode === 'learn') {
-              const germanPrompt = firstPhrase || 'Hallo! Schön Sie kennenzulernen. Wie kann ich Ihnen heute helfen?';
-              const segments = [
-                {
-                  text: `Welcome to ${scenario.title}. In this scenario, you are in a real conversation setting. Listen to what your conversation partner says:`,
-                  lang: 'en' as const,
-                },
-                {
-                  text: germanPrompt,
-                  lang: 'de' as const,
-                },
-                {
-                  text: `How would you answer this? Please respond in German.`,
-                  lang: 'en' as const,
-                },
-              ];
-              if (voiceAdapter.speakSegments) {
-                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
-              } else {
-                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
-              }
+              const opener = `Welcome ${userName}! Today we are practicing ${scenario.title}. I will give you a German phrase and explain the meaning in English, then you repeat it. The first phrase is: "${currentPhrase.german}" — which means "${currentPhrase.english}". Now, say it!`;
+              voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             } else {
-              const germanOpener = firstPhrase || `Hallo! Willkommen zu unserer Praxis-Situation: "${scenario.title}". Wie kann ich Ihnen heute helfen?`;
-              const segments = [
-                {
-                  text: `Starting your practice simulation for ${scenario.title}. From this point on, we will speak completely in German. Do your best to reply naturally.`,
-                  lang: 'en' as const,
-                },
-                {
-                  text: germanOpener,
-                  lang: 'de' as const,
-                },
-                {
-                  text: `Bitte antworten Sie auf Deutsch.`,
-                  lang: 'de' as const,
-                },
-              ];
-              if (voiceAdapter.speakSegments) {
-                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
-              } else {
-                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
-              }
+              const opener = `Welcome ${userName}! This is a realistic simulation: "${scenario.title}". We are going to have a complete conversation in German. Let's begin! Hallo! Wir starten Ihre Praxis-Situation für "${scenario.title}". Wie kann ich Ihnen heute helfen?`;
+              voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             }
           }, 350);
         }
@@ -452,53 +474,104 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
         </button>
       </header>
 
-      {/* Scenario Brief Stage Card */}
-      <div className="mb-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-            Roleplay Scenario Context
-          </span>
-          {scenario.parent_domain && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/60">
-              {scenario.parent_domain}
+      {/* Target Phrase Stepper Stage (Learn Mode) */}
+      {mode === 'learn' && currentPhrase && (
+        <div className="mb-4 p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-3 relative overflow-hidden animate-fadeIn">
+          {/* Stepper bar */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+              <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
+              Phrase {currentPhraseIndex + 1} of {targetPhrases.length}
             </span>
-          )}
-        </div>
-        <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
-          {scenario.description}
-        </p>
-
-        {/* Learn Mode Key Phrases Preview */}
-        {mode === 'learn' && (scenario.content as any)?.target_phrases?.length > 0 && (
-          <div className="pt-2 border-t border-slate-100">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-              Recommended Target Phrasing:
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {(scenario.content as any).target_phrases.slice(0, 4).map((phrase: any, idx: number) => (
-                <div
-                  key={idx}
-                  className="p-2.5 rounded-xl bg-white border border-slate-200/80 text-xs flex flex-col justify-center shadow-2xs"
-                >
-                  <span className="font-bold text-[#00215C]">{phrase.german}</span>
-                  <span className="text-[11px] text-slate-500 font-normal italic">{phrase.english}</span>
-                </div>
-              ))}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (sessionHandle && voiceAdapter.speak) {
+                    voiceAdapter.speak(sessionHandle, currentPhrase.german).catch(console.warn);
+                  }
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#255CC1] text-[11px] font-bold transition-colors"
+                title="Listen to German pronunciation"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                <span>Listen</span>
+              </button>
+              <span className="font-semibold text-slate-500 text-[11px]">
+                {Math.round(((currentPhraseIndex + 1) / targetPhrases.length) * 100)}%
+              </span>
             </div>
           </div>
-        )}
 
-        {/* Practice Mode Challenge Prompt */}
-        {mode === 'practice' && (
+          <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-full bg-[#255CC1] rounded-full transition-all duration-300"
+              style={{ width: `${((currentPhraseIndex + 1) / targetPhrases.length) * 100}%` }}
+            />
+          </div>
+
+          {/* Large German Phrase */}
+          <div className="py-2 text-center sm:text-left">
+            <p className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] leading-tight tracking-tight">
+              &ldquo;{currentPhrase.german}&rdquo;
+            </p>
+            <p className="text-sm sm:text-base text-slate-600 font-medium italic mt-1.5">
+              &ldquo;{currentPhrase.english}&rdquo;
+            </p>
+          </div>
+
+          {/* Latest Feedback for Current Phrase if user has spoken */}
+          {(() => {
+            const latestUser = turns.slice().reverse().find((t) => t.speaker === 'user');
+            if (!latestUser || !latestUser.feedback_en) return null;
+            return (
+              <div className={`p-3 rounded-xl text-xs flex items-start gap-2 border animate-fadeIn ${
+                latestUser.isCorrect
+                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                  : 'bg-amber-50/80 border-amber-200 text-amber-900'
+              }`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${
+                  latestUser.isCorrect ? 'text-emerald-600' : 'text-amber-600'
+                }`} />
+                <div className="min-w-0">
+                  <p className="font-semibold">
+                    {latestUser.isCorrect ? 'Accurate German Recitation' : 'Feedback & Correction'}
+                  </p>
+                  <p className="text-[11px] mt-0.5 text-slate-700">
+                    {latestUser.feedback_en}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Scenario Brief Stage Card (Practice Mode) */}
+      {mode === 'practice' && (
+        <div className="mb-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden animate-fadeIn">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
+              Roleplay Scenario Context
+            </span>
+            {scenario.parent_domain && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/60">
+                {scenario.parent_domain}
+              </span>
+            )}
+          </div>
+          <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
+            {scenario.description}
+          </p>
           <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-600 font-medium">
             <HelpCircle className="w-4 h-4 text-[#255CC1] shrink-0" />
             <span>
-              <strong>Simulation Active:</strong> Respond spontaneously in German. Full diagnostic feedback will be generated at the end.
+              <strong>100% German Roleplay:</strong> The conversation is held entirely in German. Respond naturally. A comprehensive English diagnostic recap will be provided at the end.
             </span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {errorMsg && (
         <div className="mb-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-2 shadow-xs animate-fadeIn">
@@ -557,10 +630,7 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
                         isUser ? 'text-blue-200' : 'text-slate-400'
                       }`}
                     >
-                      {new Date(turn.timestamp).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatTimestamp(turn.timestamp)}
                     </span>
                   </div>
                 </div>
@@ -650,7 +720,7 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
           subtitle={`${scenario.title} • ${mode === 'learn' ? 'Learn Session' : 'Practice Simulation'}`}
           mode={mode}
           recap={completedSummary}
-          actionButtonText={isRepeatedMistakePause ? "Review Completed • Exit" : "Continue to Scenarios"}
+          actionButtonText={isRepeatedMistakePause ? "Review Completed • Exit" : "Continue to Scenarios →"}
           onActionButtonClick={onCompleted}
           sessionId={dbSessionId}
           isRepeatedMistakePause={isRepeatedMistakePause}

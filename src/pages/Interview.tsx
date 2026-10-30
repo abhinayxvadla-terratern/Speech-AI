@@ -20,6 +20,7 @@ import {
 
 import { useKillSwitch } from '../hooks/useKillSwitch';
 import { TabUnavailableBanner } from '../components/layout/TabUnavailableBanner';
+import { getFallbackInterviewQuestions } from '../constants/interviewFallbacks';
 
 type InterviewView = 'list' | 'setup' | 'session' | 'exam';
 
@@ -214,6 +215,10 @@ export const Interview: React.FC = () => {
       : selectedType?.description || '';
     const activeMode = isOpenInterviewSelected ? 'practice' : selectedMode;
 
+    const effectiveSampleQs = (selectedType?.content as any)?.sample_questions?.length > 0
+      ? (selectedType?.content as any).sample_questions
+      : getFallbackInterviewQuestions(activeTypeName);
+
     return (
       <ActiveInterviewSession
         interviewTypeName={activeTypeName}
@@ -224,7 +229,7 @@ export const Interview: React.FC = () => {
         initialSessionId={incompleteSession?.id || null}
         initialTranscript={(incompleteSession?.transcript as any) || []}
         isOpenInterview={isOpenInterviewSelected}
-        sampleQuestions={(selectedType?.content as any)?.sample_questions || []}
+        sampleQuestions={effectiveSampleQs}
         onBack={() => {
           setView('setup');
           checkIncompleteSession(activeTypeName);
@@ -476,40 +481,48 @@ export const Interview: React.FC = () => {
           )}
 
           {/* SAMPLE QUESTIONS & GUIDANCE */}
-          {!isOpenInterviewSelected && selectedType && (selectedType.content as any)?.sample_questions?.length > 0 && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#00215C] uppercase tracking-wider flex items-center gap-1.5">
-                  <HelpCircle className="w-4 h-4 text-[#255CC1]" /> Sample Questions & Preparation
-                </span>
-                <span className="text-[11px] text-slate-500 font-medium">
-                  {(selectedType.content as any).sample_questions.length} questions
-                </span>
-              </div>
+          {!isOpenInterviewSelected && selectedType && (() => {
+            const sampleQs = (selectedType.content as any)?.sample_questions?.length > 0
+              ? (selectedType.content as any).sample_questions
+              : getFallbackInterviewQuestions(selectedType.type_name);
 
-              <div className="space-y-2.5 pt-1">
-                {(selectedType.content as any).sample_questions.map((q: any, qIdx: number) => (
-                  <div key={qIdx} className="p-3.5 rounded-xl bg-white border border-slate-200/80 space-y-1.5 shadow-2xs">
-                    <div className="flex items-start gap-2.5">
-                      <span className="w-5 h-5 rounded-full bg-[#EBF2FF] text-[#255CC1] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                        {qIdx + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-[#00215C] leading-snug">{q.german}</p>
-                        <p className="text-[11px] text-slate-500 italic mt-0.5">{q.english}</p>
+            if (!sampleQs || sampleQs.length === 0) return null;
+
+            return (
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#00215C] uppercase tracking-wider flex items-center gap-1.5">
+                    <HelpCircle className="w-4 h-4 text-[#255CC1]" /> Sample Questions & Preparation
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    {sampleQs.length} questions
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 pt-1">
+                  {sampleQs.map((q: any, qIdx: number) => (
+                    <div key={qIdx} className="p-3.5 rounded-xl bg-white border border-slate-200/80 space-y-1.5 shadow-2xs">
+                      <div className="flex items-start gap-2.5">
+                        <span className="w-5 h-5 rounded-full bg-[#EBF2FF] text-[#255CC1] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                          {qIdx + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-[#00215C] leading-snug">{q.german}</p>
+                          <p className="text-[11px] text-slate-500 italic mt-0.5">{q.english}</p>
+                        </div>
                       </div>
+                      {q.guidance && (
+                        <div className="ml-7 p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200/60 text-[11px] text-emerald-950 font-normal">
+                          <span className="font-semibold text-emerald-800">Key coverage points: </span>
+                          {q.guidance}
+                        </div>
+                      )}
                     </div>
-                    {q.guidance && (
-                      <div className="ml-7 p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200/60 text-[11px] text-emerald-950 font-normal">
-                        <span className="font-semibold text-emerald-800">Key coverage points: </span>
-                        {q.guidance}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* PRIMARY CTA BUTTON (CENTERED & SOLID PRIMARY COLOR) */}
           <div className="flex flex-col items-center justify-center pt-2">
