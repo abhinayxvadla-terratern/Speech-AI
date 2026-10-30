@@ -3,29 +3,23 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Module, Session } from '../lib/database.types';
-import { SESSION_DURATIONS } from '../constants/interview';
 import { ActiveSession } from './speak/ActiveSession';
 import { 
   Mic, 
   Lock, 
   CheckCircle2, 
-  Play, 
   ArrowRight, 
-  ArrowLeft, 
-  RotateCcw, 
   GraduationCap, 
   Compass, 
   Briefcase, 
   Loader2, 
-  BookOpen, 
-  Sparkles,
-  Info
+  BookOpen
 } from 'lucide-react';
 
 import { useKillSwitch } from '../hooks/useKillSwitch';
 import { TabUnavailableBanner } from '../components/layout/TabUnavailableBanner';
 
-type SpeakView = 'list' | 'detail' | 'session';
+type SpeakView = 'list' | 'session';
 
 export const Speak: React.FC = () => {
   const { user, profile } = useAuth();
@@ -40,9 +34,7 @@ export const Speak: React.FC = () => {
   // Navigation State
   const [view, setView] = useState<SpeakView>('list');
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
-  const [selectedMode, setSelectedMode] = useState<'learn' | 'practice'>('learn');
-  const [selectedDuration, setSelectedDuration] = useState<number | 'open'>(5);
-  const [showTooltip, setShowTooltip] = useState<'learn' | 'practice' | null>(null);
+  const selectedDuration: number | 'open' = 5;
 
   // Modules & Sessions Data
   const [modules, setModules] = useState<Module[]>([]);
@@ -69,13 +61,13 @@ export const Speak: React.FC = () => {
       const modList = (modData as Module[]) || [];
       setModules(modList);
 
-      // Check for autoOpenModuleId from Home tab
+      // Check for autoOpenModuleId from Home tab: open session directly
       if (location.state?.autoOpenModuleId && modList.length > 0) {
         const targetMod = modList.find((m) => m.id === location.state.autoOpenModuleId);
         if (targetMod) {
           setSelectedModule(targetMod);
           checkIncompleteSession(targetMod);
-          setView('detail');
+          setView('session');
         }
       }
 
@@ -128,31 +120,11 @@ export const Speak: React.FC = () => {
     }
   };
 
-  // Open Module Detail
+  // Open Module directly into Learn Mode Speaking session
   const handleSelectModule = (mod: Module, isAccessible: boolean) => {
     if (!isAccessible) return;
     setSelectedModule(mod);
     checkIncompleteSession(mod);
-    setView('detail');
-  };
-
-  // Start fresh session (or abandon old incomplete session)
-  const handleStartFresh = async (mode: 'learn' | 'practice') => {
-    if (incompleteSession && user) {
-      await supabase
-        .from('sessions')
-        .update({ status: 'abandoned' })
-        .eq('id', incompleteSession.id);
-      setIncompleteSession(null);
-    }
-    setSelectedMode(mode);
-    setView('session');
-  };
-
-  // Resume unfinished session
-  const handleResumeSession = () => {
-    if (!incompleteSession) return;
-    setSelectedMode(incompleteSession.mode as 'learn' | 'practice');
     setView('session');
   };
 
@@ -223,19 +195,20 @@ export const Speak: React.FC = () => {
   }
 
   // ==========================================
-  // ACTIVE SESSION VIEW
+  // ACTIVE SESSION VIEW (DIRECT TO LEARN MODE)
   // ==========================================
   if (view === 'session' && selectedModule) {
     return (
       <ActiveSession
         module={selectedModule}
-        mode={selectedMode}
+        mode="learn"
         durationMinutes={selectedDuration}
         initialSessionId={incompleteSession?.id || null}
         initialTranscript={(incompleteSession?.transcript as any) || []}
         onBack={() => {
-          setView('detail');
-          checkIncompleteSession(selectedModule);
+          setView('list');
+          setSelectedModule(null);
+          setIncompleteSession(null);
         }}
         onCompleted={() => {
           setView('list');
@@ -244,280 +217,6 @@ export const Speak: React.FC = () => {
           loadModuleData();
         }}
       />
-    );
-  }
-
-  // ==========================================
-  // MODULE DETAIL VIEW
-  // ==========================================
-  if (view === 'detail' && selectedModule) {
-    const isCompleted = completedModuleIds.has(selectedModule.id);
-    const content = (selectedModule.content as any) || {};
-    const userDomain = profile?.primary_domain;
-    const domainVariant = userDomain && content.domain_variants?.[userDomain] ? content.domain_variants[userDomain] : null;
-    const effectiveContent = domainVariant || content;
-    const targetPhrases: Array<{ german: string; english: string }> = 
-      effectiveContent.target_phrases || 
-      (effectiveContent.target_phrase ? [{ german: effectiveContent.target_phrase, english: effectiveContent.english_meaning || '' }] : []);
-    const exampleSentences: string[] = effectiveContent.example_sentences || [];
-
-    return (
-      <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn text-[#111111]">
-        {/* Detail Top Header */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => {
-              setView('list');
-              setSelectedModule(null);
-              setIncompleteSession(null);
-            }}
-            className="p-2 -ml-2 rounded-xl text-slate-600 hover:text-[#00215C] hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-xs font-semibold"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Curriculum</span>
-          </button>
-
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-100 text-xs font-semibold">
-            <Briefcase className="w-3.5 h-3.5" />
-            <span>{selectedModule.is_checkpoint ? `${userDomain} · Checkpoint Milestone` : `${selectedModule.level} · Module ${selectedModule.module_number}`}</span>
-          </span>
-        </div>
-
-        {/* Module Detail Card */}
-        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Micro-Skill Focus
-                </span>
-                {isCompleted && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Completed
-                  </span>
-                )}
-                {selectedModule.is_checkpoint && (
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200">
-                    Checkpoint
-                  </span>
-                )}
-              </div>
-              <h2 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
-                {selectedModule.title}
-              </h2>
-            </div>
-          </div>
-
-          <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Objective
-            </span>
-            <p className="text-sm text-slate-700 font-normal leading-relaxed">
-              {selectedModule.micro_skill}
-            </p>
-          </div>
-
-          {/* Target Phrases Section */}
-          {targetPhrases.length > 0 && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#00215C] uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-                  Key Target Phrases
-                </span>
-                {domainVariant ? (
-                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200">
-                    {userDomain} Track ({selectedModule.domain_weight_pct}% focus)
-                  </span>
-                ) : (
-                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-white text-slate-600 border border-slate-200/60">
-                    Standard Track
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                {targetPhrases.map((phrase, idx) => (
-                  <div key={idx} className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-                    <p className="font-heading font-bold text-sm sm:text-base text-[#00215C]">
-                      {phrase.german}
-                    </p>
-                    {phrase.english && (
-                      <p className="text-xs text-slate-500 font-normal mt-0.5 italic">
-                        "{phrase.english}"
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {exampleSentences.length > 0 && (
-                <div className="pt-2 border-t border-slate-200/60">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-                    Example Context:
-                  </span>
-                  <div className="space-y-1.5">
-                    {exampleSentences.map((sentence, idx) => (
-                      <p key={idx} className="text-xs text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200/60 leading-relaxed font-normal">
-                        • {sentence}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* INCOMPLETE SESSION ALERT PROMPT */}
-          {incompleteSession && (
-            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-3">
-              <div className="flex items-start gap-2.5">
-                <RotateCcw className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-heading font-bold text-sm text-amber-950">
-                    Unfinished Session Detected
-                  </h4>
-                  <p className="text-xs text-amber-800 mt-0.5 leading-relaxed font-normal">
-                    You have an unfinished session from earlier — resume where you left off or start fresh?
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  onClick={handleResumeSession}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold transition-colors shadow-xs"
-                >
-                  Resume Session ({incompleteSession.mode.toUpperCase()})
-                </button>
-                <button
-                  onClick={() => handleStartFresh('learn')}
-                  className="px-3.5 py-2 rounded-xl bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 text-xs font-semibold transition-colors"
-                >
-                  Start Fresh
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Mode Selection / Action Buttons (Unified Setup Pattern) */}
-          <div className="space-y-4 pt-1">
-            {/* Mode Selector Pills */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  MODE
-                </span>
-                <span className="sr-only">Select Mode:</span>
-              </div>
-
-              <div className="relative">
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMode('learn')}
-                    onMouseEnter={() => setShowTooltip('learn')}
-                    onMouseLeave={() => setShowTooltip(null)}
-                    className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                      selectedMode === 'learn'
-                        ? 'bg-[#00215C] text-white shadow-xs'
-                        : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <span>Learn</span>
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowTooltip(showTooltip === 'learn' ? null : 'learn');
-                      }}
-                      className="p-0.5 rounded-full hover:bg-black/10 transition-colors"
-                    >
-                      <Info className="w-3.5 h-3.5 opacity-70" />
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMode('practice')}
-                    onMouseEnter={() => setShowTooltip('practice')}
-                    onMouseLeave={() => setShowTooltip(null)}
-                    className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                      selectedMode === 'practice'
-                        ? 'bg-[#00215C] text-white shadow-xs'
-                        : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <span>Practice</span>
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowTooltip(showTooltip === 'practice' ? null : 'practice');
-                      }}
-                      className="p-0.5 rounded-full hover:bg-black/10 transition-colors"
-                    >
-                      <Info className="w-3.5 h-3.5 opacity-70" />
-                    </span>
-                  </button>
-                </div>
-
-                {/* Tooltip */}
-                {showTooltip && (
-                  <div className="mt-2.5 p-3 rounded-xl bg-slate-800 text-white text-xs leading-relaxed text-center animate-fadeIn shadow-md">
-                    {showTooltip === 'learn'
-                      ? 'Guided practice with instant feedback after each spoken turn.'
-                      : 'Unscaffolded dialogue simulation with full diagnostic review at completion.'}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Duration Selector */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  SESSION LENGTH
-                </span>
-                <span className="text-xs text-slate-400 font-normal">
-                  {selectedDuration === 'open' ? 'Open-ended' : `${selectedDuration} minutes`}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-2.5">
-                {SESSION_DURATIONS.map((opt) => {
-                  const isSelected = selectedDuration === opt.value;
-                  return (
-                    <button
-                      key={opt.label}
-                      type="button"
-                      onClick={() => setSelectedDuration(opt.value)}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition-all select-none text-center ${
-                        isSelected
-                          ? 'bg-[#00215C] text-white shadow-xs'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* PRIMARY CTA BUTTON (TERRATERN BRAND ACCENT BUTTON) */}
-            <div className="flex flex-col items-center justify-center pt-2">
-              <button
-                type="button"
-                onClick={() => handleStartFresh(selectedMode)}
-                className="w-full sm:w-auto min-w-[240px] px-8 py-3.5 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-bold text-sm shadow-card hover:shadow-brand transition-all flex items-center justify-center gap-2.5 group active:scale-[0.99]"
-              >
-                <span>Start voice session</span>
-                <Play className="w-4 h-4 fill-current text-[#00215C] group-hover:scale-110 transition-transform" />
-              </button>
-              <span className="sr-only">Start Session</span>
-            </div>
-          </div>
-        </div>
-      </div>
     );
   }
 
