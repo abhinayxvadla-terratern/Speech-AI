@@ -596,7 +596,7 @@ export const Interview: React.FC = () => {
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {b1Types.map((t) => (
                   <div
                     key={t.id}
@@ -639,7 +639,7 @@ export const Interview: React.FC = () => {
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {b2Types.map((t) => (
                   <div
                     key={t.id}
@@ -681,7 +681,7 @@ export const Interview: React.FC = () => {
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* 1. OPEN INTERVIEW CARD */}
               <div
                 onClick={handleOpenInterviewSetup}

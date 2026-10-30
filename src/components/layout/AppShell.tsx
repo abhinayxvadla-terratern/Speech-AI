@@ -9,7 +9,9 @@ import {
   LogOut
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useActiveSession } from '../../contexts/ActiveSessionContext';
 import { realVoiceAdapter } from '../../services/voice/voiceAdapter.real';
+import { AppLogo } from '../common/AppLogo';
 
 interface NavItem {
   label: string;
@@ -27,6 +29,7 @@ const navItems: NavItem[] = [
 
 export const AppShell: React.FC = () => {
   const { profile, signOut } = useAuth();
+  const { isSessionActive } = useActiveSession();
   const location = useLocation();
 
   // Crucial: Whenever the user navigates to a new tab/route, immediately halt any active TTS audio
@@ -46,17 +49,12 @@ export const AppShell: React.FC = () => {
         {/* App Brand Header */}
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#00215C] flex items-center justify-center text-white shadow-xs">
-              <Mic className="w-5 h-5 text-blue-200" />
-            </div>
+            <AppLogo size="md" className="drop-shadow-xs" />
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="font-heading font-extrabold text-xl text-[#00215C] tracking-tight leading-none">
                   Speech<span className="text-[#255CC1]">AI</span>
                 </h1>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
-                  DE
-                </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium mt-1">German Voice Training</p>
             </div>
@@ -122,74 +120,68 @@ export const AppShell: React.FC = () => {
         </div>
       </aside>
 
-      {/* Mobile Top App Header */}
-      <header className="md:hidden sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 py-3 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#00215C] flex items-center justify-center text-white shadow-xs">
-            <Mic className="w-4 h-4 text-blue-200" />
-          </div>
-          <div className="flex items-center gap-1.5">
+      {/* Mobile Top App Header (Hidden during active voice sessions to avoid redundant double-headers) */}
+      {!isSessionActive && (
+        <header className="md:hidden sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 py-3 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AppLogo size="sm" className="drop-shadow-xs" />
             <h1 className="font-heading font-extrabold text-lg text-[#00215C] tracking-tight leading-none">
               Speech<span className="text-[#255CC1]">AI</span>
             </h1>
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
-              {profile?.cefr_level || 'DE'}
-            </span>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          {profile?.primary_domain && (
-            <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full truncate max-w-[120px]">
-              {profile.primary_domain}
-            </span>
-          )}
-          <button
-            onClick={() => signOut()}
-            className="text-xs font-medium text-slate-500 hover:text-rose-600 flex items-center gap-1 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-            title="Sign Out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
+          <div className="flex items-center gap-2">
+            {profile?.primary_domain && (
+              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full truncate max-w-[140px]">
+                {profile.primary_domain}
+              </span>
+            )}
+          </div>
+        </header>
+      )}
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 pb-28 sm:pb-32 md:pb-8 pt-2 md:pt-6 px-3 sm:px-6 md:px-8 max-w-7xl mx-auto w-full">
+      <main className={`flex-1 min-w-0 ${
+        isSessionActive 
+          ? 'pb-4 pt-1 md:pt-4' 
+          : 'pb-28 sm:pb-32 md:pb-8 pt-2 md:pt-6'
+      } px-3 sm:px-6 md:px-8 max-w-7xl mx-auto w-full`}>
         <Outlet />
       </main>
 
-      {/* Mobile Floating Bottom Navigation Bar (Visible < md) */}
-      <nav 
-        aria-label="Mobile Navigation"
-        className="md:hidden fixed z-40 left-4 right-4 max-w-md mx-auto bg-white border border-slate-200/90 rounded-2xl shadow-[0_10px_28px_rgba(0,33,92,0.12),0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden"
-        style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
-      >
-        <div className="grid grid-cols-5 h-16 items-center px-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isExactActive(item.to);
-            return (
-              <NavLink
-                key={item.label}
-                to={item.to}
-                className={`flex flex-col items-center justify-center py-1 select-none transition-colors duration-150 ${
-                  active
-                    ? 'text-[#255CC1]'
-                    : 'text-slate-600 hover:text-[#00215C]'
-                }`}
-              >
-                <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-[#EBF2FF]' : ''}`}>
-                  <Icon className={`w-5 h-5 ${active ? 'text-[#255CC1] stroke-[2.3]' : 'text-slate-500 stroke-[1.8]'}`} />
-                </div>
-                <span className={`text-[11px] mt-0.5 leading-tight ${active ? 'font-bold text-[#255CC1]' : 'font-medium text-slate-600'}`}>
-                  {item.label}
-                </span>
-              </NavLink>
-            );
-          })}
-        </div>
-      </nav>
+      {/* Mobile Floating Bottom Navigation Bar (Visible < md, hidden during active voice sessions for full immersion) */}
+      {!isSessionActive && (
+        <nav 
+          aria-label="Mobile Navigation"
+          className="md:hidden fixed z-40 left-4 right-4 max-w-md mx-auto bg-white border border-slate-200/90 rounded-2xl shadow-[0_10px_28px_rgba(0,33,92,0.12),0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden"
+          style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="grid grid-cols-5 h-16 items-center px-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = isExactActive(item.to);
+              return (
+                <NavLink
+                  key={item.label}
+                  to={item.to}
+                  className={`flex flex-col items-center justify-center py-1 select-none transition-colors duration-150 ${
+                    active
+                      ? 'text-[#255CC1]'
+                      : 'text-slate-600 hover:text-[#00215C]'
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-[#EBF2FF]' : ''}`}>
+                    <Icon className={`w-5 h-5 ${active ? 'text-[#255CC1] stroke-[2.3]' : 'text-slate-500 stroke-[1.8]'}`} />
+                  </div>
+                  <span className={`text-[11px] mt-0.5 leading-tight ${active ? 'font-bold text-[#255CC1]' : 'font-medium text-slate-600'}`}>
+                    {item.label}
+                  </span>
+                </NavLink>
+              );
+            })}
+          </div>
+        </nav>
+      )}
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
+import { ActiveSessionProvider } from './contexts/ActiveSessionContext';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { AdminProtectedRoute } from './routes/AdminProtectedRoute';
 import { AdminRoleRoute } from './routes/AdminRoleRoute';
@@ -22,6 +23,8 @@ const UtmCaptureTracker: React.FC = () => {
 // Auth Pages
 import { Login } from './pages/auth/Login';
 import { SignUp } from './pages/auth/SignUp';
+import { ForgotPassword } from './pages/auth/ForgotPassword';
+import { ResetPassword } from './pages/auth/ResetPassword';
 
 // Onboarding Flow
 import { OnboardingFlow } from './pages/onboarding/OnboardingFlow';
@@ -46,10 +49,13 @@ export const App: React.FC = () => {
       <UtmCaptureTracker />
       <AuthProvider>
         <AdminAuthProvider>
-          <Routes>
+          <ActiveSessionProvider>
+            <Routes>
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Onboarding Route (Requires login, does not require onboarding completed) */}
             <Route element={<ProtectedRoute requireOnboarding={false} />}>
@@ -98,8 +104,9 @@ export const App: React.FC = () => {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </AdminAuthProvider>
-      </AuthProvider>
+        </ActiveSessionProvider>
+      </AdminAuthProvider>
+    </AuthProvider>
     </BrowserRouter>
   );
 };

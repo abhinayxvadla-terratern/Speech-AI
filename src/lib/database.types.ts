@@ -285,3 +285,18 @@ export interface LlmProviderLog {
   acknowledged?: boolean;
   created_at: string;
 }
+
+export type FeedbackCategory = 'Bug' | 'Feature request' | 'Content issue' | 'Other';
+export type FeedbackStatus = 'new' | 'reviewed' | 'resolved';
+
+export interface UserFeedback {
+  id: string;
+  user_id: string;
+  rating?: number | null;
+  category: FeedbackCategory;
+  message: string;
+  session_id?: string | null;
+  status: FeedbackStatus;
+  created_at: string;
+}
+

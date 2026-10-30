@@ -9,9 +9,17 @@ import {
   TrendingDown,
   Sparkles,
   BarChart3,
-  Globe
+  Globe,
+  MessageSquarePlus,
+  Clock,
+  Star
 } from 'lucide-react';
-import { fetchAdminOverviewData, AdminOverviewData } from '../../services/adminOverviewService';
+import { 
+  fetchAdminOverviewData, 
+  fetchAdminFeedbackOverview, 
+  AdminOverviewData, 
+  AdminFeedbackOverviewData 
+} from '../../services/adminOverviewService';
 
 const SOURCE_META: Record<string, { label: string; badge: string; bar: string }> = {
   paid_social: { label: 'Paid Social', badge: 'bg-purple-100 text-purple-800 border-purple-200', bar: 'bg-purple-600' },
@@ -34,6 +42,7 @@ function getSourceMeta(src: string) {
 
 export const AdminOverview: React.FC = () => {
   const [data, setData] = useState<AdminOverviewData | null>(null);
+  const [feedbackData, setFeedbackData] = useState<AdminFeedbackOverviewData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,8 +54,12 @@ export const AdminOverview: React.FC = () => {
       if (!silent) setLoading(true);
       setIsRefreshing(true);
       setError(null);
-      const res = await fetchAdminOverviewData();
+      const [res, fb] = await Promise.all([
+        fetchAdminOverviewData(),
+        fetchAdminFeedbackOverview(),
+      ]);
       setData(res);
+      setFeedbackData(fb);
       setLastUpdated(new Date());
     } catch (err: any) {
       console.error('Failed to load admin overview metrics:', err);
@@ -563,6 +576,138 @@ export const AdminOverview: React.FC = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* 4. Bottom Row: Recent Learner Feedback & Category Breakdown */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#255CC1] flex items-center justify-center shrink-0">
+              <MessageSquarePlus className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-heading font-bold text-base text-[#00215C]">
+                Recent Learner Feedback
+              </h3>
+              <p className="text-xs text-slate-500 font-body mt-0.5">
+                Submissions from the in-app support channel & diagnostic recap error reports.
+              </p>
+            </div>
+          </div>
+
+          {/* Category Count Breakdown & Overall Rating Pills */}
+          <div className="flex flex-wrap items-center gap-2">
+            {feedbackData?.average_rating !== null && feedbackData?.average_rating !== undefined && (
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 shadow-2xs mr-1">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span className="font-heading font-extrabold text-xs">{feedbackData.average_rating}</span>
+                <span className="text-[10px] text-amber-700 font-semibold">/ 5.0</span>
+                <span className="text-[10px] text-amber-600 font-medium ml-0.5">({feedbackData.ratings_count} ratings)</span>
+              </div>
+            )}
+
+            <span className="text-[11px] font-bold text-slate-500 mr-1 hidden sm:inline">Breakdown:</span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+              <span>Bugs:</span>
+              <strong className="font-bold">{feedbackData?.category_counts['Bug'] || 0}</strong>
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+              <span>Features:</span>
+              <strong className="font-bold">{feedbackData?.category_counts['Feature request'] || 0}</strong>
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              <span>Content:</span>
+              <strong className="font-bold">{feedbackData?.category_counts['Content issue'] || 0}</strong>
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+              <span>Other:</span>
+              <strong className="font-bold">{feedbackData?.category_counts['Other'] || 0}</strong>
+            </span>
+          </div>
+        </div>
+
+        {/* Feedback List */}
+        {!feedbackData || feedbackData.recent_feedback.length === 0 ? (
+          <div className="py-10 text-center text-slate-400">
+            <p className="text-xs font-semibold text-slate-600">No user feedback submitted yet</p>
+            <p className="text-[11px] mt-1">Feedback logged via user profile or diagnostic recaps will appear here live.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {feedbackData.recent_feedback.map((item) => {
+              const catBadge =
+                item.category === 'Bug'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : item.category === 'Feature request'
+                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                  : item.category === 'Content issue'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-slate-50 text-slate-700 border-slate-200';
+
+              const statusBadge =
+                item.status === 'resolved'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : item.status === 'reviewed'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200';
+
+              return (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 hover:bg-slate-50 transition-colors flex flex-col justify-between gap-2.5"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border uppercase tracking-wider ${catBadge}`}>
+                          {item.category}
+                        </span>
+                        {item.rating && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                            <span>{item.rating}★</span>
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border capitalize ${statusBadge}`}>
+                          {item.status}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-400 flex items-center gap-1 shrink-0 font-medium">
+                        <Clock className="w-3 h-3" />
+                        {new Date(item.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-800 leading-relaxed font-normal line-clamp-3">
+                      "{item.message}"
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
+                    <span className="font-semibold text-[#00215C]">
+                      From: {item.user_name || 'Learner'}
+                    </span>
+                    {item.session_id ? (
+                      <span className="font-mono text-[10px] bg-blue-50 text-[#255CC1] px-1.5 py-0.5 rounded border border-blue-100">
+                        Session #{item.session_id.slice(0, 8)}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400">General App</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <span>Platform-wide live user feedback stream</span>
+          <span className="font-semibold text-[#00215C]">
+            Total feedback logged: <strong className="text-xs font-bold text-[#255CC1]">{feedbackData?.total_count || 0}</strong>
+          </span>
+        </div>
       </div>
     </div>
   );

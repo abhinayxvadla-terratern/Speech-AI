@@ -14,18 +14,25 @@ import {
   Minus,
   Loader2,
   Lock,
-  Globe
+  Globe,
+  MessageSquarePlus,
+  Clock,
+  Star
 } from 'lucide-react';
 import { 
   AdminDirectoryUser, 
   CefrLevel, 
   Session, 
   DiagnosticRecap, 
-  UserOverrides 
+  UserOverrides,
+  UserFeedback,
+  FeedbackStatus
 } from '../../lib/database.types';
 import { 
   fetchUserSessions, 
   fetchUserDiagnosticRecaps,
+  fetchUserFeedback,
+  updateFeedbackStatus,
   updateAdminUserCefrLevel,
   updateAdminUserAddedDomains,
   toggleAdminUserNotifications,
@@ -65,12 +72,14 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
 
   const { isSuperAdmin, role } = useAdminAuth();
 
-  // Active Sub-Tab: 'profile' | 'sessions' | 'recaps' | 'actions'
-  const [activeTab, setActiveTab] = useState<'profile' | 'sessions' | 'recaps' | 'actions'>('profile');
+  // Active Sub-Tab: 'profile' | 'sessions' | 'recaps' | 'feedback' | 'actions'
+  const [activeTab, setActiveTab] = useState<'profile' | 'sessions' | 'recaps' | 'feedback' | 'actions'>('profile');
 
-  // Sessions and Recaps
+  // Sessions, Recaps & Feedback
   const [sessions, setSessions] = useState<Session[]>([]);
   const [recaps, setRecaps] = useState<DiagnosticRecap[]>([]);
+  const [userFeedbackList, setUserFeedbackList] = useState<UserFeedback[]>([]);
+  const [updatingFeedbackId, setUpdatingFeedbackId] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState<boolean>(true);
 
   // Transcript viewer
@@ -110,16 +119,18 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
     const loadUserData = async () => {
       try {
         setDataLoading(true);
-        const [userSessions, userRecaps] = await Promise.all([
+        const [userSessions, userRecaps, userFeedback] = await Promise.all([
           fetchUserSessions(user.id),
           fetchUserDiagnosticRecaps(user.id),
+          fetchUserFeedback(user.id),
         ]);
         if (isMounted) {
           setSessions(userSessions);
           setRecaps(userRecaps);
+          setUserFeedbackList(userFeedback);
         }
       } catch (err) {
-        console.error('Error fetching user sessions/recaps:', err);
+        console.error('Error fetching user sessions/recaps/feedback:', err);
       } finally {
         if (isMounted) setDataLoading(false);
       }
@@ -134,6 +145,23 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
   const showNotification = (type: 'success' | 'error', text: string) => {
     setFeedbackMsg({ type, text });
     setTimeout(() => setFeedbackMsg(null), 4000);
+  };
+
+  // Handle Feedback status update
+  const handleUpdateFeedbackStatus = async (feedbackId: string, nextStatus: FeedbackStatus) => {
+    try {
+      setUpdatingFeedbackId(feedbackId);
+      const updated = await updateFeedbackStatus(feedbackId, nextStatus, adminUserId);
+      setUserFeedbackList((prev) =>
+        prev.map((f) => (f.id === feedbackId ? { ...f, status: updated.status } : f))
+      );
+      showNotification('success', `Feedback status updated to "${nextStatus}"`);
+    } catch (err: any) {
+      console.error('Failed to update feedback status:', err);
+      showNotification('error', err?.message || 'Failed to update feedback status');
+    } finally {
+      setUpdatingFeedbackId(null);
+    }
   };
 
   // 1. Handle CEFR level change
@@ -376,6 +404,19 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
               Diagnostic Recaps
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600">
                 {recaps.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('feedback')}
+              className={`py-3.5 border-b-2 transition-all flex items-center gap-1.5 ${
+                activeTab === 'feedback'
+                  ? 'border-[#255CC1] text-[#00215C]'
+                  : 'border-transparent text-slate-500 hover:text-[#00215C]'
+              }`}
+            >
+              Feedback Submitted
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600">
+                {userFeedbackList.length}
               </span>
             </button>
             <button
@@ -757,6 +798,119 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
                       </div>
                     );
                   })
+                )}
+              </div>
+            )}
+
+            {/* TAB: FEEDBACK SUBMITTED */}
+            {activeTab === 'feedback' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <MessageSquarePlus className="w-4 h-4 text-[#255CC1]" />
+                    <h4 className="font-heading font-bold text-sm text-[#00215C]">
+                      Feedback & Support Submissions ({userFeedbackList.length})
+                    </h4>
+                  </div>
+                  <span className="text-xs text-slate-400">
+                    Live from in-app support & diagnostic recap flags
+                  </span>
+                </div>
+
+                {userFeedbackList.length === 0 ? (
+                  <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-400">
+                    <MessageSquarePlus className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#255CC1]" />
+                    <p className="text-xs font-semibold text-slate-600">No feedback submitted by this user</p>
+                    <p className="text-[11px] mt-1 text-slate-400">
+                      Feedback submitted by this user from their profile settings or recap screens will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {userFeedbackList.map((item) => {
+                      const isUpdating = updatingFeedbackId === item.id;
+                      const catBadge =
+                        item.category === 'Bug'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : item.category === 'Feature request'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : item.category === 'Content issue'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-slate-50 text-slate-700 border-slate-200';
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3 transition-colors hover:border-slate-300"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold border uppercase tracking-wider ${catBadge}`}>
+                                {item.category}
+                              </span>
+
+                              {item.rating && (
+                                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                  <span>{item.rating} / 5</span>
+                                </span>
+                              )}
+
+                              {item.session_id ? (
+                                <span className="font-mono text-[10px] bg-blue-50 text-[#255CC1] px-2 py-0.5 rounded border border-blue-100 flex items-center gap-1">
+                                  <span>Session: #{item.session_id.slice(0, 8)}</span>
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-slate-400">
+                                  General App Feedback
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {new Date(item.created_at).toLocaleString([], {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+
+                              {/* Interactive Status Selector */}
+                              <div className="flex items-center gap-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">Status:</label>
+                                <select
+                                  value={item.status}
+                                  disabled={isUpdating}
+                                  onChange={(e) => handleUpdateFeedbackStatus(item.id, e.target.value as FeedbackStatus)}
+                                  className={`text-xs font-bold rounded-lg px-2.5 py-1 border outline-none cursor-pointer transition-colors ${
+                                    item.status === 'resolved'
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                      : item.status === 'reviewed'
+                                      ? 'bg-blue-50 text-blue-800 border-blue-300'
+                                      : 'bg-amber-50 text-amber-800 border-amber-300'
+                                  }`}
+                                >
+                                  <option value="new">new</option>
+                                  <option value="reviewed">reviewed</option>
+                                  <option value="resolved">resolved</option>
+                                </select>
+                                {isUpdating && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#255CC1]" />}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Message Body */}
+                          <div className="text-xs text-slate-800 leading-relaxed font-normal bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                            {item.message}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}

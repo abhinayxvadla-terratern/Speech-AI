@@ -5,7 +5,6 @@ import {
   Users, 
   Layers, 
   Sliders, 
-  ShieldCheck, 
   LogOut, 
   ExternalLink,
   Database,
@@ -17,6 +16,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { AdminRole } from '../../lib/database.types';
+import { AppLogo } from '../common/AppLogo';
 
 interface AdminNavItem {
   label: string;
@@ -91,9 +91,7 @@ export const AdminLayout: React.FC = () => {
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#00215C] flex items-center justify-center text-white shadow-xs">
-              <ShieldCheck className="w-5 h-5 text-blue-300" />
-            </div>
+            <AppLogo size="md" className="drop-shadow-xs" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-heading font-extrabold text-lg text-[#00215C] tracking-tight leading-none">
@@ -225,9 +223,7 @@ export const AdminLayout: React.FC = () => {
         {/* Mobile Top Header (Visible < md) */}
         <header className="md:hidden sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 py-3 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#00215C] flex items-center justify-center text-white shadow-xs">
-              <ShieldCheck className="w-4 h-4 text-blue-200" />
-            </div>
+            <AppLogo size="sm" className="drop-shadow-xs" />
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-heading font-extrabold text-base text-[#00215C] tracking-tight leading-none">

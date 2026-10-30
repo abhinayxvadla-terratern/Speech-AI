@@ -117,7 +117,7 @@ function serverApiDevPlugin(): Plugin {
     name: 'server-api-dev-server',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if (!req.url?.startsWith('/api/keys') && !req.url?.startsWith('/api/llm')) {
+        if (!req.url?.startsWith('/api/keys') && !req.url?.startsWith('/api/llm') && !req.url?.startsWith('/api/feedback-notify')) {
           return next();
         }
 
@@ -176,6 +176,12 @@ function serverApiDevPlugin(): Plugin {
             await handler(mockReq, mockRes);
             return;
           }
+
+          if (req.url.startsWith('/api/feedback-notify')) {
+            const { default: handler } = await import('./api/feedback-notify');
+            await handler(mockReq, mockRes);
+            return;
+          }
         } catch (err: any) {
           console.error('Server API dev middleware error:', err?.message || err);
           if (!res.headersSent) {
@@ -200,11 +206,13 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         injectRegister: 'script',
         includeAssets: [
-          'favicon.svg',
+          'favicon.png',
           'apple-touch-icon.png',
           'pwa-192x192.png',
           'pwa-512x512.png',
           'maskable-icon-512x512.png',
+          'logo-emblem.png',
+          'logo-full.png',
         ],
         manifest: {
           name: 'SpeechAI',

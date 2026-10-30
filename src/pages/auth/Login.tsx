@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Mic, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { AppLogo } from '../../components/common/AppLogo';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -9,6 +10,8 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const successNotice = (location.state as any)?.successMessage || null;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,8 +65,8 @@ export const Login: React.FC = () => {
     <div className="min-h-screen bg-[#FAFBFF] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 text-[#111111]">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         {/* Brand Icon */}
-        <div className="w-14 h-14 rounded-2xl bg-[#00215C] text-white flex items-center justify-center mx-auto shadow-md">
-          <Mic className="w-7 h-7 text-[#255CC1]" />
+        <div className="flex justify-center mb-1">
+          <AppLogo size="xl" className="drop-shadow-md" />
         </div>
 
         <h1 className="mt-4 font-heading font-extrabold text-3xl text-[#00215C] tracking-tight">
@@ -82,6 +85,13 @@ export const Login: React.FC = () => {
           <p className="text-xs text-slate-500 mb-6">
             Enter your email and password to continue practice
           </p>
+
+          {successNotice && (
+            <div className="mb-5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-fadeIn">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              <span>{successNotice}</span>
+            </div>
+          )}
 
           {errorMsg && (
             <div className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
@@ -117,6 +127,14 @@ export const Login: React.FC = () => {
                 placeholder="••••••••"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-[#111111] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#255CC1] focus:border-transparent transition-all"
               />
+              <div className="flex justify-end mt-1.5">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-medium text-[#255CC1] hover:underline hover:text-[#00215C] transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
             </div>
 
             <button

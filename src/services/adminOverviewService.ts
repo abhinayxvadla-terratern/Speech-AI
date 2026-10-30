@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { FeedbackCategory, FeedbackStatus, UserFeedback } from '../lib/database.types';
 
 export interface AdminOverviewStats {
   new_signups_today: number;
@@ -24,12 +25,35 @@ export interface AdminSourceCount {
   count: number;
 }
 
+export interface AdminFeedbackOverviewItem {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  user_email?: string;
+  rating?: number | null;
+  category: FeedbackCategory;
+  message: string;
+  session_id?: string | null;
+  status: FeedbackStatus;
+  created_at: string;
+}
+
+export interface AdminFeedbackOverviewData {
+  recent_feedback: AdminFeedbackOverviewItem[];
+  category_counts: Record<string, number>;
+  rating_distribution: Record<number, number>;
+  average_rating: number | null;
+  ratings_count: number;
+  total_count: number;
+}
+
 export interface AdminOverviewData {
   stats: AdminOverviewStats;
   funnel: AdminFunnelData;
   top_mistakes: AdminMistakeCategory[];
   signups_by_source_30d: AdminSourceCount[];
   signups_by_source_all: AdminSourceCount[];
+  feedback?: AdminFeedbackOverviewData;
 }
 
 /**
@@ -185,3 +209,87 @@ export async function fetchAdminOverviewData(): Promise<AdminOverviewData> {
     signups_by_source_all,
   };
 }
+
+/**
+ * Fetches recent feedback submissions platform-wide with category counts.
+ */
+export async function fetchAdminFeedbackOverview(): Promise<AdminFeedbackOverviewData> {
+  const { data: feedbackRows, error } = await supabase
+    .from('feedback')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching admin feedback overview:', error);
+    return {
+      recent_feedback: [],
+      category_counts: {},
+      rating_distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      average_rating: null,
+      ratings_count: 0,
+      total_count: 0,
+    };
+  }
+
+  const rows = (feedbackRows || []) as UserFeedback[];
+
+  // Fetch profiles to get user names for display
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
+  const profileMap = new Map<string, { name?: string }>();
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', userIds);
+    (profiles || []).forEach((p) => {
+      profileMap.set(p.id, { name: p.name });
+    });
+  }
+
+  const categoryCounts: Record<string, number> = {
+    'Bug': 0,
+    'Feature request': 0,
+    'Content issue': 0,
+    'Other': 0,
+  };
+
+  const ratingDistribution: Record<number, number> = {
+    5: 0,
+    4: 0,
+    3: 0,
+    2: 0,
+    1: 0,
+  };
+
+  let ratingSum = 0;
+  let ratingsCount = 0;
+
+  rows.forEach((r) => {
+    categoryCounts[r.category] = (categoryCounts[r.category] || 0) + 1;
+    if (r.rating && r.rating >= 1 && r.rating <= 5) {
+      ratingDistribution[r.rating] = (ratingDistribution[r.rating] || 0) + 1;
+      ratingSum += r.rating;
+      ratingsCount += 1;
+    }
+  });
+
+  const averageRating = ratingsCount > 0 ? Number((ratingSum / ratingsCount).toFixed(1)) : null;
+
+  const recentFeedback: AdminFeedbackOverviewItem[] = rows.slice(0, 10).map((r) => {
+    const prof = profileMap.get(r.user_id);
+    return {
+      ...r,
+      user_name: prof?.name || 'User ' + r.user_id.slice(0, 8),
+    };
+  });
+
+  return {
+    recent_feedback: recentFeedback,
+    category_counts: categoryCounts,
+    rating_distribution: ratingDistribution,
+    average_rating: averageRating,
+    ratings_count: ratingsCount,
+    total_count: rows.length,
+  };
+}
+

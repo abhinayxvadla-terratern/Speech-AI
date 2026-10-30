@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { DiagnosticRecapResult } from '../services/diagnosticService';
-import { ArrowLeft, Award, Clock, Loader2, AlertCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Award, Clock, Loader2, AlertCircle, MessageSquare, HelpCircle } from 'lucide-react';
+import { AppLogo } from '../components/common/AppLogo';
+import { FeedbackModal } from '../components/feedback/FeedbackModal';
 
 export const SessionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +14,7 @@ export const SessionDetail: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [session, setSession] = useState<any>(null);
   const [recap, setRecap] = useState<DiagnosticRecapResult | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchSessionAndRecap = async () => {
@@ -223,11 +226,31 @@ export const SessionDetail: React.FC = () => {
               ) : (
                 <p className="text-xs text-slate-400 italic">No specific errors recorded for this session.</p>
               )}
+
+              {/* Small diagnostic feedback reporting link */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setFeedbackOpen(true)}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#255CC1] transition-colors"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  <span className="underline underline-offset-2">Something wrong with this feedback?</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-slate-50 text-xs text-slate-500 text-center">
-            No diagnostic recap was generated for this session yet.
+          <div className="p-4 rounded-xl bg-slate-50 text-xs text-slate-500 text-center space-y-2">
+            <p>No diagnostic recap was generated for this session yet.</p>
+            <button
+              type="button"
+              onClick={() => setFeedbackOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#255CC1] transition-colors"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span className="underline underline-offset-2">Something wrong with this session?</span>
+            </button>
           </div>
         )}
 
@@ -250,13 +273,15 @@ export const SessionDetail: React.FC = () => {
                 const rawText = turn.rawTranscript || turn.text;
                 return (
                   <div key={tIdx} className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}>
-                    <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                        isUser ? 'bg-[#00215C] text-white shadow-2xs' : 'bg-[#255CC1] text-white shadow-2xs'
-                      }`}
-                    >
-                      {isUser ? 'You' : 'DE'}
-                    </div>
+                    {isUser ? (
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 bg-[#00215C] text-white shadow-2xs">
+                        You
+                      </div>
+                    ) : (
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-white border border-slate-200/90 shadow-2xs p-0.5 overflow-hidden">
+                        <AppLogo size={20} alt="AI Coach" />
+                      </div>
+                    )}
                     <div
                       className={`max-w-[85%] p-3.5 rounded-2xl text-xs leading-relaxed ${
                         isUser
@@ -285,6 +310,14 @@ export const SessionDetail: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Diagnostic Feedback Modal */}
+      <FeedbackModal
+        isOpen={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        defaultCategory="Content issue"
+        sessionId={id}
+      />
     </div>
   );
 };

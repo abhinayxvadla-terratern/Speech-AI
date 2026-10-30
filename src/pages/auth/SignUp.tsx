@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Mic, ArrowRight, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
 import { getAndMapStoredUtmSource, clearStoredUtmSource } from '../../services/utmTrackingService';
+import { AppLogo } from '../../components/common/AppLogo';
 
 export const SignUp: React.FC = () => {
   const [name, setName] = useState('');
@@ -89,8 +90,8 @@ export const SignUp: React.FC = () => {
     <div className="min-h-screen bg-[#FAFBFF] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 text-[#111111]">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         {/* Brand Icon */}
-        <div className="w-14 h-14 rounded-2xl bg-[#00215C] text-white flex items-center justify-center mx-auto shadow-md">
-          <Mic className="w-7 h-7 text-[#255CC1]" />
+        <div className="flex justify-center mb-1">
+          <AppLogo size="xl" className="drop-shadow-md" />
         </div>
 
         <h1 className="mt-4 font-heading font-extrabold text-3xl text-[#00215C] tracking-tight">

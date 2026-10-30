@@ -610,7 +610,7 @@ export const Speak: React.FC = () => {
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3.5">
+                  <div className="flex items-start gap-3.5 min-w-0 flex-1">
                     {/* Status Circle Badge */}
                     <div
                       className={`w-10 h-10 rounded-xl flex items-center justify-center font-heading font-extrabold text-sm shrink-0 transition-colors ${
@@ -631,7 +631,7 @@ export const Speak: React.FC = () => {
                     </div>
 
                     {/* Module Info */}
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5 mb-1">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                           Module {mod.module_number}

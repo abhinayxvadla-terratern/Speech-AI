@@ -1,5 +1,13 @@
 import { supabase } from '../lib/supabase';
-import { AdminDirectoryUser, CefrLevel, UserOverrides, Session, DiagnosticRecap } from '../lib/database.types';
+import { 
+  AdminDirectoryUser, 
+  CefrLevel, 
+  UserOverrides, 
+  Session, 
+  DiagnosticRecap,
+  UserFeedback,
+  FeedbackStatus
+} from '../lib/database.types';
 import { logAdminAuditAction } from './adminAuditService';
 import { resetOnboarding } from '../lib/onboarding';
 
@@ -93,6 +101,50 @@ export async function fetchUserDiagnosticRecaps(userId: string): Promise<Diagnos
 
   if (error) throw error;
   return (data || []) as DiagnosticRecap[];
+}
+
+/**
+ * Fetch all feedback submitted by a specific user.
+ */
+export async function fetchUserFeedback(userId: string): Promise<UserFeedback[]> {
+  const { data, error } = await supabase
+    .from('feedback')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []) as UserFeedback[];
+}
+
+/**
+ * Update feedback status (new -> reviewed -> resolved) and log audit action.
+ */
+export async function updateFeedbackStatus(
+  feedbackId: string,
+  status: FeedbackStatus,
+  adminUserId?: string
+): Promise<UserFeedback> {
+  const { data, error } = await supabase
+    .from('feedback')
+    .update({ status })
+    .eq('id', feedbackId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  if (adminUserId) {
+    await logAdminAuditAction({
+      adminUserId,
+      action: 'UPDATE_FEEDBACK_STATUS',
+      targetType: 'feedback',
+      targetId: feedbackId,
+      details: { new_status: status },
+    }).catch(console.error);
+  }
+
+  return data as UserFeedback;
 }
 
 /**

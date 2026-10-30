@@ -14,9 +14,10 @@ import {
   TrendingDown, 
   Compass, 
   Briefcase, 
-  Loader2,
-  Mic
+  Loader2
 } from 'lucide-react';
+import { AppLogo } from '../components/common/AppLogo';
+import { PwaInstallBanner } from '../components/pwa/PwaInstallBanner';
 
 export const Home: React.FC = () => {
   const { user, profile } = useAuth();
@@ -205,33 +206,32 @@ export const Home: React.FC = () => {
 
   if (isNewUser) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center max-w-md mx-auto px-4 py-8 animate-fadeIn text-[#111111]">
-        {/* Executive Voice Training Icon Badge */}
-        <div className="relative mb-6">
-          <div className="w-20 h-20 rounded-2xl bg-[#EBF2FF] border border-blue-100 flex items-center justify-center text-[#255CC1] shadow-xs">
-            <Mic className="w-9 h-9" />
+      <div className="space-y-6 max-w-md mx-auto px-4 py-8 text-[#111111]">
+        <PwaInstallBanner />
+
+        <div className="min-h-[55vh] flex flex-col items-center justify-center text-center animate-fadeIn">
+          {/* Executive Voice Training Icon Badge */}
+          <div className="mb-6 flex justify-center">
+            <AppLogo size="xl" className="drop-shadow-md" />
           </div>
-          <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00215C] text-white shadow-xs">
-            DE
-          </span>
-        </div>
 
-        <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight leading-tight">
-          Master Professional Spoken German
-        </h1>
+          <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight leading-tight">
+            Master Professional Spoken German
+          </h1>
 
-        <p className="mt-3 text-sm text-slate-600 font-normal leading-relaxed">
-          Realistic voice simulations tailored to your field — healthcare, Ausbildung, and university study.
-        </p>
+          <p className="mt-3 text-sm text-slate-600 font-normal leading-relaxed">
+            Realistic voice simulations tailored to your field — healthcare, Ausbildung, and university study.
+          </p>
 
-        <div className="mt-8 w-full">
-          <Link
-            to={isC1C2 ? '/scenarios' : '/speak'}
-            className="w-full py-3.5 px-6 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-bold text-sm sm:text-base inline-flex items-center justify-center gap-2.5 shadow-xs active:scale-[0.99] transition-all"
-          >
-            <span>Start Practice</span>
-            <ArrowRight className="w-4 h-4 text-[#00215C]" />
-          </Link>
+          <div className="mt-8 w-full">
+            <Link
+              to={isC1C2 ? '/scenarios' : '/speak'}
+              className="w-full py-3.5 px-6 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-bold text-sm sm:text-base inline-flex items-center justify-center gap-2.5 shadow-xs active:scale-[0.99] transition-all"
+            >
+              <span>Start Practice</span>
+              <ArrowRight className="w-4 h-4 text-[#00215C]" />
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -252,6 +252,9 @@ export const Home: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto text-[#111111] animate-fadeIn">
+      {/* PWA Dismissible Install Banner */}
+      <PwaInstallBanner />
+
       {/* Page Title & User Greeting Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1 pb-1">
         <div>
@@ -296,18 +299,18 @@ export const Home: React.FC = () => {
         </p>
 
         {/* 3 Quick-Start Buttons */}
-        <div className="grid grid-cols-3 gap-3 mt-5">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-4 sm:mt-5">
           {[5, 10, 15].map((mins) => (
             <button
               key={mins}
               onClick={() => handleQuickStart(mins)}
-              className="py-3 px-2 rounded-xl bg-white text-[#00215C] hover:bg-slate-50 transition-all font-semibold text-xs sm:text-sm shadow-xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 group border border-slate-100"
+              className="min-w-0 py-2.5 sm:py-3 px-1.5 sm:px-2 rounded-xl bg-white text-[#00215C] hover:bg-slate-50 transition-all font-semibold text-xs sm:text-sm shadow-xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 group border border-slate-100"
             >
-              <span className="font-heading font-extrabold text-lg sm:text-xl text-[#00215C] leading-none">
-                {mins} <span className="text-xs font-semibold text-slate-500">min</span>
+              <span className="font-heading font-extrabold text-base sm:text-xl text-[#00215C] leading-none">
+                {mins} <span className="text-[11px] sm:text-xs font-semibold text-slate-500">min</span>
               </span>
-              <span className="text-[11px] text-[#255CC1] font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-1 mt-0.5">
-                Launch <Play className="w-3 h-3 fill-[#255CC1]" />
+              <span className="text-[10px] sm:text-[11px] text-[#255CC1] font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-1 mt-0.5">
+                Launch <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-[#255CC1]" />
               </span>
             </button>
           ))}
@@ -315,51 +318,51 @@ export const Home: React.FC = () => {
       </div>
 
       {/* 2. STREAK + STATS ROW (Unified classic cards) */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {/* Current Streak */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="min-w-0 bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
             Daily Streak
           </span>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <Flame className="w-5 h-5 text-amber-500 fill-amber-500 shrink-0" />
-            <span className="font-heading font-extrabold text-xl sm:text-2xl text-[#00215C]">
+          <div className="flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5">
+            <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 fill-amber-500 shrink-0" />
+            <span className="font-heading font-extrabold text-lg sm:text-2xl text-[#00215C]">
               {streak?.current_streak ?? 0}
             </span>
             <span className="text-xs font-medium text-slate-500 hidden sm:inline">days</span>
           </div>
-          <span className="text-[11px] text-slate-400 mt-1">
+          <span className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
             Active streak
           </span>
         </div>
 
         {/* Modules Completed */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="min-w-0 bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
             Modules
           </span>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="font-heading font-extrabold text-xl sm:text-2xl text-[#00215C]">
+          <div className="flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
+            <span className="font-heading font-extrabold text-lg sm:text-2xl text-[#00215C]">
               {completedModulesCount}
             </span>
           </div>
-          <span className="text-[11px] text-slate-400 mt-1">Completed</span>
+          <span className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">Completed</span>
         </div>
 
         {/* Last Session Date */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="min-w-0 bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
             Last Active
           </span>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <Clock className="w-4 h-4 text-[#255CC1] shrink-0" />
-            <span className="font-heading font-bold text-sm sm:text-base text-[#00215C] truncate">
+          <div className="flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5 min-w-0">
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#255CC1] shrink-0" />
+            <span className="font-heading font-bold text-xs sm:text-base text-[#00215C] truncate">
               {formatRelativeDate(streak?.last_session_date || null)}
             </span>
           </div>
-          <span className="text-[11px] text-slate-400 mt-1 truncate">
-            {streak?.total_sessions || 0} sessions completed
+          <span className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+            {streak?.total_sessions || 0} sessions
           </span>
         </div>
       </div>

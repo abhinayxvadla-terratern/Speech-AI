@@ -578,9 +578,9 @@ export const Scenarios: React.FC = () => {
           </p>
         </div>
       ) : (
-        /* Scenarios 2-Column Grid on Desktop, 1-Column on Mobile */
+        /* Scenarios 2-Column Grid on Desktop, 1-Column on Tablet/Mobile */
         activeTab === 'domain' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {domainScenarios.map((sc) => renderScenarioCard(sc, false))}
           </div>
         ) : (
@@ -598,7 +598,7 @@ export const Scenarios: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   {baselineScenarios.map((sc) => renderScenarioCard(sc, true))}
                 </div>
               </div>
@@ -613,7 +613,7 @@ export const Scenarios: React.FC = () => {
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   {regularDailyScenarios.map((sc) => renderScenarioCard(sc, false))}
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useActiveSession } from '../../contexts/ActiveSessionContext';
 import { voiceAdapter, VoiceSessionHandle, TranscriptTurn, VoiceState } from '../../services/voice';
 import { generateDiagnosticRecap, DiagnosticRecapResult } from '../../services/diagnosticService';
 import { recordSessionCompletionInStreak } from '../../lib/streaks';
@@ -19,6 +20,7 @@ import {
   Sparkles,
   Square
 } from 'lucide-react';
+import { AppLogo } from '../../components/common/AppLogo';
 
 interface ActiveInterviewSessionProps {
   interviewTypeName: string;
@@ -52,6 +54,15 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
   onCompleted,
 }) => {
   const { user, profile } = useAuth();
+  const { setSessionActive } = useActiveSession();
+
+  // Keep AppShell updated on immersive active session status
+  useEffect(() => {
+    setSessionActive(true);
+    return () => {
+      setSessionActive(false);
+    };
+  }, [setSessionActive]);
 
   // Supabase Session ID
   const [dbSessionId, setDbSessionId] = useState<string | null>(initialSessionId || null);
@@ -507,15 +518,15 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
             return (
               <div key={idx} className="space-y-1.5 animate-fadeIn">
                 <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${
-                      isUser
-                        ? 'bg-[#00215C] text-white'
-                        : 'bg-[#255CC1] text-white'
-                    }`}
-                  >
-                    {isUser ? 'You' : 'DE'}
-                  </div>
+                  {isUser ? (
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 shadow-xs bg-[#00215C] text-white">
+                      You
+                    </div>
+                  ) : (
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs bg-white border border-slate-200/90 p-1 overflow-hidden">
+                      <AppLogo size={28} alt="Interviewer" />
+                    </div>
+                  )}
 
                   <div
                     className={`max-w-[85%] sm:max-w-[78%] p-4 rounded-2xl text-sm leading-relaxed ${
@@ -583,6 +594,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           recap={completedSummary}
           actionButtonText="Continue to Interview Hub"
           onActionButtonClick={onCompleted}
+          sessionId={dbSessionId}
         />
       )}
     </div>

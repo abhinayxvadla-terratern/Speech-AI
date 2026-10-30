@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { AppLogo } from '../../components/common/AppLogo';
 import { Sparkles, ArrowRight, CheckCircle2, LogOut } from 'lucide-react';
 
 export const OnboardingPlaceholder: React.FC = () => {
@@ -42,9 +43,7 @@ export const OnboardingPlaceholder: React.FC = () => {
       {/* Top Header */}
       <div className="flex items-center justify-between max-w-lg mx-auto w-full pt-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#00215C] text-white flex items-center justify-center font-bold text-sm">
-            DE
-          </div>
+          <AppLogo size="sm" className="drop-shadow-xs" />
           <span className="font-heading font-extrabold text-lg text-[#00215C]">
             Speech<span className="text-[#255CC1]">AI</span>
           </span>

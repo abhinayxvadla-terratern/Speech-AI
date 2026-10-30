@@ -30,7 +30,8 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
 
   return (
     <div
-      className={`sticky bottom-3 sm:bottom-4 z-30 max-w-xl mx-auto w-full px-2 transition-all duration-200 ${className}`}
+      style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+      className={`sticky z-30 max-w-xl mx-auto w-full px-2 transition-all duration-200 ${className}`}
     >
       <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-dock rounded-full px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3">
         {/* =========================================================================

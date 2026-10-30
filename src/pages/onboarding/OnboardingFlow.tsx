@@ -16,9 +16,9 @@ import {
   Calendar as CalendarIcon, 
   Clock, 
   Loader2,
-  Info,
-  Mic
+  Info
 } from 'lucide-react';
+import { AppLogo } from '../../components/common/AppLogo';
 
 interface CefrOption {
   level: CefrLevel;
@@ -293,11 +293,9 @@ export const OnboardingFlow: React.FC = () => {
             </div>
           </div>
 
-          {/* Right branding badge */}
+          {/* Right branding */}
           <div className="w-10 flex justify-end">
-            <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-[#EBF2FF] text-[#255CC1]">
-              DE
-            </span>
+            <AppLogo size="xs" className="opacity-90" />
           </div>
         </div>
       </header>
@@ -315,13 +313,8 @@ export const OnboardingFlow: React.FC = () => {
         {currentStep === 1 && (
           <div className="flex flex-col items-center text-center animate-fadeIn py-2">
             {/* Executive Voice Training Icon Badge */}
-            <div className="relative mb-6">
-              <div className="w-20 h-20 rounded-2xl bg-[#EBF2FF] border border-blue-100 flex items-center justify-center text-[#255CC1] shadow-xs">
-                <Mic className="w-9 h-9" />
-              </div>
-              <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00215C] text-white shadow-xs">
-                DE
-              </span>
+            <div className="mb-6 flex justify-center">
+              <AppLogo size="xl" className="drop-shadow-md" />
             </div>
 
             {/* Platform Introduction */}
