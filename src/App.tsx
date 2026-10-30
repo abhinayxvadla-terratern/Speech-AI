@@ -25,6 +25,7 @@ import { Login } from './pages/auth/Login';
 import { SignUp } from './pages/auth/SignUp';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
 import { ResetPassword } from './pages/auth/ResetPassword';
+import { InstallApp } from './pages/InstallApp';
 
 // Onboarding Flow
 import { OnboardingFlow } from './pages/onboarding/OnboardingFlow';
@@ -56,6 +57,11 @@ export const App: React.FC = () => {
             <Route path="/signup" element={<SignUp />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Public App Install Slugs */}
+            <Route path="/install" element={<InstallApp />} />
+            <Route path="/get-app" element={<Navigate to="/install" replace />} />
+            <Route path="/download" element={<Navigate to="/install" replace />} />
 
             {/* Onboarding Route (Requires login, does not require onboarding completed) */}
             <Route element={<ProtectedRoute requireOnboarding={false} />}>
