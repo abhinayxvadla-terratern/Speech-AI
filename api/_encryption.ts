@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 const DEFAULT_DEV_KEY = 'c7b2e94f1082d6a59c3f4e8b1d7a0c5e9f2a4b6c8d0e1f3a5b7c9d1e3f5a7b9c';
 
