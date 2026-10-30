@@ -19,7 +19,8 @@ import {
   Clock,
   Sparkles,
   Square,
-  X
+  X,
+  Briefcase
 } from 'lucide-react';
 import { AppLogo } from '../../components/common/AppLogo';
 
@@ -422,9 +423,9 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
   handleFinishRef.current = handleFinishSession;
 
   return (
-    <div className="max-w-3xl mx-auto flex flex-col min-h-[calc(100vh-8rem)] text-[#111111] animate-fadeIn">
+    <div className="max-w-3xl mx-auto flex flex-col min-h-[calc(100dvh-6rem)] text-[#111111] animate-fadeIn">
       {/* Top Header Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs mb-4 flex items-center justify-between gap-3">
+      <header className="bg-white/95 backdrop-blur-md sticky top-0 z-20 rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={handleBack}
@@ -434,64 +435,60 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                {pressureConfig.title} Pressure
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                {pressureConfig.title} Pace
               </span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                 isOpenInterview
-                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
                   : mode === 'learn'
-                  ? 'bg-blue-50 text-[#255CC1] border border-blue-200'
-                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+                  ? 'bg-blue-50 text-[#255CC1] border border-blue-200/80'
+                  : 'bg-amber-50 text-amber-800 border border-amber-200/80'
               }`}>
-                {isOpenInterview ? 'Open Interview' : mode === 'learn' ? 'Learn Mode' : 'Practice Mode'}
+                {isOpenInterview ? 'Open Simulation' : mode === 'learn' ? 'Guided Interview' : 'Evaluation'}
+              </span>
+              <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold flex items-center gap-1 ${
+                isTimeUp
+                  ? 'bg-rose-50 border-rose-200 text-rose-700 animate-pulse'
+                  : 'bg-slate-100 border-slate-200/60 text-slate-700'
+              }`}>
+                <Clock className="w-3 h-3 text-[#255CC1]" />
+                <span>
+                  {formatTime(secondsElapsed)}
+                  {targetSeconds ? ` / ${formatTime(targetSeconds)}` : ''}
+                </span>
               </span>
             </div>
-            <h2 className="font-heading font-extrabold text-base sm:text-lg text-[#00215C] truncate">
+            <h1 className="font-heading font-extrabold text-sm sm:text-base text-[#00215C] truncate mt-0.5">
               {interviewTypeName}
-            </h2>
+            </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Timer Display */}
-          <div className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 ${
-            isTimeUp
-              ? 'bg-rose-50 border-rose-200 text-rose-700 animate-pulse'
-              : 'bg-slate-50 border-slate-200 text-slate-700'
-          }`}>
-            <Clock className="w-3.5 h-3.5" />
-            <span>
-              {formatTime(secondsElapsed)}
-              {targetSeconds ? ` / ${formatTime(targetSeconds)}` : ''}
-            </span>
-          </div>
+        <button
+          onClick={handleFinishSession}
+          disabled={isFinishing || turns.length === 0}
+          className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-[#00215C] text-white text-xs font-bold transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
+        >
+          {isFinishing ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Square className="w-3 h-3 fill-white" />
+          )}
+          <span>Complete Interview</span>
+        </button>
+      </header>
 
-          <button
-            onClick={handleFinishSession}
-            disabled={isFinishing || turns.length === 0}
-            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors disabled:opacity-40 flex items-center gap-1.5 border border-slate-200/60"
-          >
-            {isFinishing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Square className="w-3 h-3 text-slate-600 fill-slate-600" />
-            )}
-            <span className="hidden sm:inline">Finish</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Interview Brief Card */}
-      <div className="mb-4 p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-3">
+      {/* Interview Brief Stage Card */}
+      <div className="mb-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
+          <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-            Simulation Context
+            Simulation Context & Setup
           </span>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60">
-            {pressureMode} Pace
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/60">
+            {pressureMode} Pressure
           </span>
         </div>
 
@@ -499,7 +496,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
         {isExamMode && examPromptText ? (
           <div className="space-y-2">
             <div>
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
                 Official Exam Prompt / Aufgabenstellung:
               </span>
               <p className="text-xs font-bold text-[#00215C]">{examPromptText.german}</p>
@@ -507,7 +504,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
             </div>
 
             {examPromptText.bullet_points && examPromptText.bullet_points.length > 0 && (
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+              <div className="p-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                   Leitpunkte / Points to Cover:
                 </span>
@@ -522,7 +519,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
         ) : mode === 'learn' && !isOpenInterview ? (
           /* Learn Mode Briefing */
           <div className="space-y-2.5">
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
               {description}
             </p>
 
@@ -539,7 +536,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
                 {showSampleQuestions && (
                   <div className="mt-2 space-y-2 max-h-48 overflow-y-auto pr-1">
                     {sampleQuestions.map((q, idx) => (
-                      <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs space-y-1">
+                      <div key={idx} className="p-3 rounded-xl bg-white border border-slate-200/80 text-xs space-y-1 shadow-2xs">
                         <p className="font-bold text-[#00215C]">{idx + 1}. {q.german}</p>
                         <p className="text-[11px] text-slate-500 italic font-normal">{q.english}</p>
                         <p className="text-[11px] text-emerald-900 bg-emerald-50/80 p-2 rounded-lg border border-emerald-100 font-normal">
@@ -554,20 +551,20 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           </div>
         ) : (
           /* Practice Mode or Open Interview Note */
-          <div className="flex items-center gap-2 text-xs text-slate-600">
+          <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
             <HelpCircle className="w-4 h-4 text-[#255CC1] shrink-0" />
-            <span className="font-normal">
-              <strong>Realistic Interview Simulation:</strong> Respond with natural German professional phrasing. No mid-session interruptions occur; full assessment follows upon completion.
+            <span>
+              <strong>Professional Simulation:</strong> Respond with natural German workplace register (Sie). Comprehensive evaluation generated upon completion.
             </span>
           </div>
         )}
       </div>
 
       {errorMsg && (
-        <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-2 shadow-xs animate-fadeIn">
+        <div className="mb-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-2 shadow-xs animate-fadeIn">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-            <span>{errorMsg}</span>
+            <span className="font-medium">{errorMsg}</span>
           </div>
           <button
             onClick={() => setErrorMsg(null)}
@@ -579,14 +576,16 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
         </div>
       )}
 
-      {/* Transcript Conversation Area */}
-      <div className="flex-1 space-y-3.5 py-2 overflow-y-auto px-1">
+      {/* Transcript Conversation Area with Guaranteed Bottom Clearance */}
+      <div className="flex-1 space-y-3.5 py-2 overflow-y-auto px-1 pb-36">
         {turns.length === 0 ? (
-          <div className="py-14 text-center text-slate-400 bg-white rounded-2xl border border-slate-200/70 p-6 shadow-xs">
-            <Volume2 className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-            <p className="text-sm font-semibold text-[#00215C]">Connecting German interview simulation</p>
-            <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-              Answer the interviewer's opening question in German. Turns advance automatically.
+          <div className="py-12 text-center text-slate-400 bg-white/80 rounded-2xl border border-slate-200/70 p-6 shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center mx-auto mb-3 shadow-xs">
+              <Briefcase className="w-6 h-6 animate-pulse" />
+            </div>
+            <p className="text-sm font-heading font-extrabold text-[#00215C]">Interview Studio Active</p>
+            <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto font-medium leading-relaxed">
+              Listen to the interviewer’s opening question, then respond with professional German phrasing.
             </p>
           </div>
         ) : (

@@ -19,7 +19,8 @@ import {
   Clock,
   Sparkles,
   Square,
-  X
+  X,
+  Compass
 } from 'lucide-react';
 import { AppLogo } from '../../components/common/AppLogo';
 
@@ -396,9 +397,9 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
   handleFinishRef.current = handleFinishSession;
 
   return (
-    <div className="max-w-3xl mx-auto flex flex-col min-h-[calc(100vh-8rem)] text-[#111111] animate-fadeIn">
+    <div className="max-w-3xl mx-auto flex flex-col min-h-[calc(100dvh-6rem)] text-[#111111] animate-fadeIn">
       {/* Top Header Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs mb-4 flex items-center justify-between gap-3">
+      <header className="bg-white/95 backdrop-blur-md sticky top-0 z-20 rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={handleBack}
@@ -408,81 +409,77 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                 Level {scenario.min_level}
               </span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                 mode === 'learn'
-                  ? 'bg-blue-50 text-[#255CC1] border border-blue-200'
-                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+                  ? 'bg-blue-50 text-[#255CC1] border border-blue-200/80'
+                  : 'bg-amber-50 text-amber-800 border border-amber-200/80'
               }`}>
-                {mode === 'learn' ? 'Learn Mode' : 'Practice Mode'}
+                {mode === 'learn' ? 'Guided Roleplay' : 'Simulation'}
+              </span>
+              <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold flex items-center gap-1 ${
+                isTimeUp
+                  ? 'bg-rose-50 border-rose-200 text-rose-700 animate-pulse'
+                  : 'bg-slate-100 border-slate-200/60 text-slate-700'
+              }`}>
+                <Clock className="w-3 h-3 text-[#255CC1]" />
+                <span>
+                  {formatTime(secondsElapsed)}
+                  {targetSeconds ? ` / ${formatTime(targetSeconds)}` : ''}
+                </span>
               </span>
             </div>
-            <h2 className="font-heading font-extrabold text-base sm:text-lg text-[#00215C] truncate">
+            <h1 className="font-heading font-extrabold text-sm sm:text-base text-[#00215C] truncate mt-0.5">
               {scenario.title}
-            </h2>
+            </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Timer Display */}
-          <div className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 ${
-            isTimeUp
-              ? 'bg-rose-50 border-rose-200 text-rose-700 animate-pulse'
-              : 'bg-slate-50 border-slate-200 text-slate-700'
-          }`}>
-            <Clock className="w-3.5 h-3.5" />
-            <span>
-              {formatTime(secondsElapsed)}
-              {targetSeconds ? ` / ${formatTime(targetSeconds)}` : ''}
-            </span>
-          </div>
+        <button
+          onClick={handleFinishSession}
+          disabled={isFinishing || turns.length === 0}
+          className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-[#00215C] text-white text-xs font-bold transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
+        >
+          {isFinishing ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Square className="w-3 h-3 fill-white" />
+          )}
+          <span>Complete Simulation</span>
+        </button>
+      </header>
 
-          <button
-            onClick={handleFinishSession}
-            disabled={isFinishing || turns.length === 0}
-            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors disabled:opacity-40 flex items-center gap-1.5 border border-slate-200/60"
-          >
-            {isFinishing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Square className="w-3 h-3 text-slate-600 fill-slate-600" />
-            )}
-            <span className="hidden sm:inline">Finish</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Scenario Brief Card */}
-      <div className="mb-4 p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-3">
+      {/* Scenario Brief Stage Card */}
+      <div className="mb-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
+          <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-            Scenario Brief
+            Roleplay Scenario Context
           </span>
           {scenario.parent_domain && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/60">
               {scenario.parent_domain}
             </span>
           )}
         </div>
-        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+        <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
           {scenario.description}
         </p>
 
-        {/* Learn Mode Key Phrases Accordion Preview */}
+        {/* Learn Mode Key Phrases Preview */}
         {mode === 'learn' && (scenario.content as any)?.target_phrases?.length > 0 && (
           <div className="pt-2 border-t border-slate-100">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
-              Helpful German Target Phrases:
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+              Recommended Target Phrasing:
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {(scenario.content as any).target_phrases.slice(0, 4).map((phrase: any, idx: number) => (
                 <div
                   key={idx}
-                  className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs flex flex-col justify-center"
+                  className="p-2.5 rounded-xl bg-white border border-slate-200/80 text-xs flex flex-col justify-center shadow-2xs"
                 >
                   <span className="font-bold text-[#00215C]">{phrase.german}</span>
                   <span className="text-[11px] text-slate-500 font-normal italic">{phrase.english}</span>
@@ -494,22 +491,20 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
 
         {/* Practice Mode Challenge Prompt */}
         {mode === 'practice' && (
-          <div className="pt-2 border-t border-slate-100">
-            <div className="flex items-center gap-2 text-xs text-slate-600">
-              <HelpCircle className="w-4 h-4 text-[#255CC1] shrink-0" />
-              <span>
-                <strong>Simulation Active:</strong> Respond naturally in German. All phrasing feedback will be provided in your end diagnostic report.
-              </span>
-            </div>
+          <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-600 font-medium">
+            <HelpCircle className="w-4 h-4 text-[#255CC1] shrink-0" />
+            <span>
+              <strong>Simulation Active:</strong> Respond spontaneously in German. Full diagnostic feedback will be generated at the end.
+            </span>
           </div>
         )}
       </div>
 
       {errorMsg && (
-        <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-2 shadow-xs animate-fadeIn">
+        <div className="mb-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-2 shadow-xs animate-fadeIn">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-            <span>{errorMsg}</span>
+            <span className="font-medium">{errorMsg}</span>
           </div>
           <button
             onClick={() => setErrorMsg(null)}
@@ -521,14 +516,16 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
         </div>
       )}
 
-      {/* Transcript Conversation Area */}
-      <div className="flex-1 space-y-3.5 py-2 overflow-y-auto px-1">
+      {/* Transcript Conversation Area with Guaranteed Bottom Clearance */}
+      <div className="flex-1 space-y-3.5 py-2 overflow-y-auto px-1 pb-36">
         {turns.length === 0 ? (
-          <div className="py-14 text-center text-slate-400 bg-white rounded-2xl border border-slate-200/70 p-6 shadow-xs">
-            <Volume2 className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-            <p className="text-sm font-semibold text-[#00215C]">Connecting situational dialogue</p>
-            <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-              Speak your response in German to begin. Turns advance automatically.
+          <div className="py-12 text-center text-slate-400 bg-white/80 rounded-2xl border border-slate-200/70 p-6 shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center mx-auto mb-3 shadow-xs">
+              <Compass className="w-6 h-6 animate-pulse" />
+            </div>
+            <p className="text-sm font-heading font-extrabold text-[#00215C]">Your Simulation Stage is Active</p>
+            <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto font-medium leading-relaxed">
+              Listen to the opening prompt from your roleplay partner, then respond in German.
             </p>
           </div>
         ) : (

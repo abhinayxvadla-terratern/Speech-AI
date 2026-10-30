@@ -508,11 +508,13 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
       {/* Transcript Conversation Area with Guaranteed Bottom Clearance */}
       <div className="flex-1 space-y-3.5 py-2 overflow-y-auto px-1 pb-36">
         {turns.length === 0 ? (
-          <div className="py-14 text-center text-slate-400 bg-white rounded-2xl border border-slate-200/70 p-6 shadow-xs">
-            <Volume2 className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-            <p className="text-sm font-semibold text-[#00215C]">Ready for voice practice</p>
-            <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-              Recite the German target phrase clearly into your microphone — automatic turn-taking is active.
+          <div className="py-12 text-center text-slate-400 bg-white/80 rounded-2xl border border-slate-200/70 p-6 shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center mx-auto mb-3 shadow-xs">
+              <Volume2 className="w-6 h-6 animate-pulse" />
+            </div>
+            <p className="text-sm font-heading font-extrabold text-[#00215C]">Your Spoken German Stage is Live</p>
+            <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto font-medium leading-relaxed">
+              Listen to your coach introduction, then recite the target phrase aloud with natural cadence.
             </p>
           </div>
         ) : (
