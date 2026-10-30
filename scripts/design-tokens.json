@@ -1,0 +1,904 @@
+{
+  "colors": {
+    "Color": {
+      "name": "Color",
+      "hex": "#4a4a68",
+      "opacity": 1
+    },
+    "_Design System/Header": {
+      "name": "_Design System/Header",
+      "hex": "#ffffff",
+      "opacity": 1
+    },
+    "Header": {
+      "name": "Header",
+      "hex": "#000000",
+      "opacity": 0.8956000208854675
+    },
+    "Rectangle": {
+      "name": "Rectangle",
+      "hex": "#3d3d3d",
+      "opacity": 0.23999999463558197
+    },
+    "Gray 601": {
+      "name": "Gray 601",
+      "hex": "#4b4b4b",
+      "opacity": 1
+    },
+    "#768397": {
+      "name": "#768397",
+      "hex": "#8e8e8e",
+      "opacity": 1
+    },
+    "Gray 603": {
+      "name": "Gray 603",
+      "hex": "#4b4b4b",
+      "opacity": 1
+    },
+    "Text": {
+      "name": "Text",
+      "hex": "#6c757d",
+      "opacity": 1
+    },
+    "P": {
+      "name": "P",
+      "hex": "#ffffff",
+      "opacity": 1
+    },
+    "Gray 600": {
+      "name": "Gray 600",
+      "hex": "#4b4b4b",
+      "opacity": 1
+    },
+    "Gray 604": {
+      "name": "Gray 604",
+      "hex": "#4b4b4b",
+      "opacity": 1
+    },
+    "Gray 602": {
+      "name": "Gray 602",
+      "hex": "#4b4b4b",
+      "opacity": 1
+    },
+    "Gray 605": {
+      "name": "Gray 605",
+      "hex": "#707070",
+      "opacity": 1
+    },
+    "T": {
+      "name": "T",
+      "hex": "#ffffff",
+      "opacity": 1
+    }
+  },
+  "typography": [
+    {
+      "name": "Typography",
+      "characters": "Typography",
+      "fontFamily": "Poppins",
+      "fontWeight": 700,
+      "fontSize": 40,
+      "lineHeightPx": 60,
+      "letterSpacing": -0.8
+    },
+    {
+      "name": "Aa",
+      "characters": "Aa",
+      "fontFamily": "Poppins",
+      "fontWeight": 600,
+      "fontSize": 60,
+      "lineHeightPx": 72,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Title",
+      "characters": "Poppins",
+      "fontFamily": "Poppins",
+      "fontWeight": 700,
+      "fontSize": 32,
+      "lineHeightPx": 48,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Aa",
+      "characters": "Aa",
+      "fontFamily": "Roboto",
+      "fontWeight": 600,
+      "fontSize": 60,
+      "lineHeightPx": 72,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Title",
+      "characters": "Roboto",
+      "fontFamily": "Roboto",
+      "fontWeight": 700,
+      "fontSize": 32,
+      "lineHeightPx": 48,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Desktop/Website",
+      "characters": "Desktop/Website ",
+      "fontFamily": "Poppins",
+      "fontWeight": 700,
+      "fontSize": 40,
+      "lineHeightPx": 60,
+      "letterSpacing": -0.8
+    },
+    {
+      "name": "Title/Header 1",
+      "characters": "Title/Header 1",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Poppins Weight: Semi Bold Size: 48px Letter Spacing: -2%",
+      "characters": "Family: Poppins\nWeight: Semi B",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Title/Header 1",
+      "characters": "Title/Header 1",
+      "fontFamily": "Poppins",
+      "fontWeight": 600,
+      "fontSize": 48,
+      "lineHeightPx": 72,
+      "letterSpacing": -0.96
+    },
+    {
+      "name": "Title/Header 2",
+      "characters": "Title/Header 2",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Poppins Weight: Semi Bold Size: 40px Letter Spacing: -2%",
+      "characters": "Family: Poppins\nWeight: Semi B",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Title/Header 2",
+      "characters": "Title/Header 2",
+      "fontFamily": "Poppins",
+      "fontWeight": 600,
+      "fontSize": 40,
+      "lineHeightPx": 60,
+      "letterSpacing": -0.8
+    },
+    {
+      "name": "Title/Header 3",
+      "characters": "Title/Header 3",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Poppins Weight: Semi Bold Size: 24px Letter Spacing: -2%",
+      "characters": "Family: Poppins\nWeight: Semi B",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Header 3",
+      "characters": "Header 3",
+      "fontFamily": "Poppins",
+      "fontWeight": 600,
+      "fontSize": 32,
+      "lineHeightPx": 48,
+      "letterSpacing": -0.64
+    },
+    {
+      "name": "Header 4",
+      "characters": "Header 4",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Poppins Weight: Semi Bold Size: 24px",
+      "characters": "Family: Poppins\nWeight: Semi B",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Header 4",
+      "characters": "Header 4",
+      "fontFamily": "Poppins",
+      "fontWeight": 600,
+      "fontSize": 24,
+      "lineHeightPx": 36,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Body",
+      "characters": "Body",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Inter Weight: Medium Size: 16px",
+      "characters": "Family: Inter\nWeight: Medium\nS",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Body",
+      "characters": "Body",
+      "fontFamily": "Roboto",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Caption",
+      "characters": "Caption",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Roboto Weight: Medium Size: 14px",
+      "characters": "Family:  Roboto\nWeight: Medium",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Caption",
+      "characters": "Caption",
+      "fontFamily": "Roboto",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Small",
+      "characters": "Small",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Roboto Weight: Regular Size: 12px",
+      "characters": "Family:  Roboto\nWeight: Regula",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Small",
+      "characters": "Small",
+      "fontFamily": "Roboto",
+      "fontWeight": 400,
+      "fontSize": 12,
+      "lineHeightPx": 16.799999237060547,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Mobile",
+      "characters": "Mobile",
+      "fontFamily": "Poppins",
+      "fontWeight": 700,
+      "fontSize": 40,
+      "lineHeightPx": 60,
+      "letterSpacing": -0.8
+    },
+    {
+      "name": "Title/Header 1",
+      "characters": "Title/Header 1",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Poppins Weight: Semi Bold Size: 24px Letter Spacing: -2%",
+      "characters": "Family: Poppins\nWeight: Semi B",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Title/Header 1",
+      "characters": "Title/Header 1",
+      "fontFamily": "Poppins",
+      "fontWeight": 600,
+      "fontSize": 24,
+      "lineHeightPx": 36,
+      "letterSpacing": -0.48
+    },
+    {
+      "name": "Title/Header 1",
+      "characters": "Title/Header 1",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Poppins Weight: Semi Bold Size: 20px Letter Spacing: -2%",
+      "characters": "Family: Poppins\nWeight: Semi B",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Title/Header 1",
+      "characters": "Title/Header 1",
+      "fontFamily": "Poppins",
+      "fontWeight": 600,
+      "fontSize": 20,
+      "lineHeightPx": 30,
+      "letterSpacing": -0.4
+    },
+    {
+      "name": "Header 3",
+      "characters": "Header 3",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Poppins Weight: Semi Bold Size:16px Letter Spacing: -2%",
+      "characters": "Family: Poppins\nWeight: Semi B",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Header 3",
+      "characters": "Header 3",
+      "fontFamily": "Poppins",
+      "fontWeight": 600,
+      "fontSize": 16,
+      "lineHeightPx": 24,
+      "letterSpacing": -0.32
+    },
+    {
+      "name": "Subtitle/Body Large",
+      "characters": "Subtitle/Body Large",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Poppins Weight: Medium Size: 16px",
+      "characters": "Family: Poppins\nWeight: Medium",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Subtitle",
+      "characters": "Subtitle",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 24,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Body",
+      "characters": "Body",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Roboto Weight: Regular Size: 14px Line Height: 140%",
+      "characters": "Family: Roboto\nWeight: Regular",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Body",
+      "characters": "Body",
+      "fontFamily": "Roboto",
+      "fontWeight": 400,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Bold",
+      "characters": "Bold",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Font Weight: Bold",
+      "characters": "Font Weight: Bold",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Body",
+      "characters": "Body",
+      "fontFamily": "Roboto",
+      "fontWeight": 600,
+      "fontSize": 14,
+      "lineHeightPx": 16.40625,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Small",
+      "characters": "Small",
+      "fontFamily": "Poppins",
+      "fontWeight": 500,
+      "fontSize": 16,
+      "lineHeightPx": 22.399999618530273,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Family: Roboto Weight: Regular Size: 12px",
+      "characters": "Family:  Roboto\nWeight: Regula",
+      "fontFamily": "Work Sans",
+      "fontWeight": 500,
+      "fontSize": 14,
+      "lineHeightPx": 19.600000381469727,
+      "letterSpacing": 0
+    },
+    {
+      "name": "Smaller text here",
+      "characters": "Smaller text here",
+      "fontFamily": "Roboto",
+      "fontWeight": 400,
+      "fontSize": 12,
+      "lineHeightPx": 16.799999237060547,
+      "letterSpacing": 0
+    }
+  ],
+  "cornerRadiuses": [
+    {
+      "name": "Corner Radius",
+      "cornerRadius": 24
+    },
+    {
+      "name": "900",
+      "cornerRadius": 4
+    },
+    {
+      "name": "900",
+      "cornerRadius": 8
+    },
+    {
+      "name": "900",
+      "cornerRadius": 16
+    },
+    {
+      "name": "900",
+      "cornerRadius": 32
+    }
+  ],
+  "spacing": [
+    {
+      "name": "Size and Spacing",
+      "width": 1956,
+      "height": 1069
+    },
+    {
+      "name": "_Design System/Header",
+      "width": 1828,
+      "height": 92
+    },
+    {
+      "name": "Size and Spacing",
+      "width": 344,
+      "height": 60
+    },
+    {
+      "name": "Frame 427318165",
+      "width": 1744,
+      "height": 881
+    },
+    {
+      "name": "Frame 427318174",
+      "width": 1744,
+      "height": 881
+    },
+    {
+      "name": "Frame 427318164",
+      "width": 1744,
+      "height": 881
+    },
+    {
+      "name": ".Section Header",
+      "width": 1392,
+      "height": 85
+    },
+    {
+      "name": "Text",
+      "width": 1392,
+      "height": 40
+    },
+    {
+      "name": "Content",
+      "width": 1195,
+      "height": 772
+    },
+    {
+      "name": "Small",
+      "width": 1195,
+      "height": 772
+    },
+    {
+      "name": "Frame 1739329295",
+      "width": 1169,
+      "height": 40
+    },
+    {
+      "name": "Column 1",
+      "width": 1110,
+      "height": 4
+    },
+    {
+      "name": "4px",
+      "width": 43,
+      "height": 40
+    },
+    {
+      "name": "Frame 1739329296",
+      "width": 1168,
+      "height": 40
+    },
+    {
+      "name": "Column 2",
+      "width": 1110,
+      "height": 8
+    },
+    {
+      "name": "8px",
+      "width": 42,
+      "height": 40
+    },
+    {
+      "name": "Frame 1739329297",
+      "width": 1180,
+      "height": 40
+    },
+    {
+      "name": "Column 3",
+      "width": 1110,
+      "height": 16
+    },
+    {
+      "name": "16px",
+      "width": 54,
+      "height": 40
+    },
+    {
+      "name": "Frame 1739329298",
+      "width": 1183,
+      "height": 40
+    },
+    {
+      "name": "Column 13",
+      "width": 1110,
+      "height": 24
+    },
+    {
+      "name": "24px",
+      "width": 57,
+      "height": 40
+    },
+    {
+      "name": "Frame 1739329299",
+      "width": 1183,
+      "height": 40
+    },
+    {
+      "name": "Column 6",
+      "width": 1110,
+      "height": 32
+    },
+    {
+      "name": "32px",
+      "width": 57,
+      "height": 40
+    }
+  ],
+  "effects": [
+    {
+      "name": "900",
+      "effects": [
+        {
+          "type": "DROP_SHADOW",
+          "visible": true,
+          "color": {
+            "r": 0.14509804546833038,
+            "g": 0.3607843220233917,
+            "b": 0.7568627595901489,
+            "a": 0.05000000074505806
+          },
+          "blendMode": "NORMAL",
+          "offset": {
+            "x": 0,
+            "y": 30
+          },
+          "radius": 30,
+          "showShadowBehindNode": false
+        }
+      ]
+    },
+    {
+      "name": "image 2",
+      "effects": [
+        {
+          "type": "DROP_SHADOW",
+          "visible": true,
+          "color": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0.25
+          },
+          "blendMode": "NORMAL",
+          "offset": {
+            "x": 0,
+            "y": 4
+          },
+          "radius": 4,
+          "showShadowBehindNode": false
+        }
+      ]
+    },
+    {
+      "name": "900",
+      "effects": [
+        {
+          "type": "DROP_SHADOW",
+          "visible": true,
+          "color": {
+            "r": 0.14509804546833038,
+            "g": 0.3607843220233917,
+            "b": 0.7568627595901489,
+            "a": 0.10000000149011612
+          },
+          "blendMode": "NORMAL",
+          "offset": {
+            "x": 0,
+            "y": 16
+          },
+          "radius": 16,
+          "showShadowBehindNode": false
+        }
+      ]
+    },
+    {
+      "name": "image 3",
+      "effects": [
+        {
+          "type": "DROP_SHADOW",
+          "visible": true,
+          "color": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0.25
+          },
+          "blendMode": "NORMAL",
+          "offset": {
+            "x": 0,
+            "y": 4
+          },
+          "radius": 4,
+          "showShadowBehindNode": false
+        }
+      ]
+    },
+    {
+      "name": "900",
+      "effects": [
+        {
+          "type": "DROP_SHADOW",
+          "visible": true,
+          "color": {
+            "r": 0.14509804546833038,
+            "g": 0.3607843220233917,
+            "b": 0.7568627595901489,
+            "a": 0.20000000298023224
+          },
+          "blendMode": "NORMAL",
+          "offset": {
+            "x": 0,
+            "y": 10
+          },
+          "radius": 16,
+          "showShadowBehindNode": false
+        }
+      ]
+    },
+    {
+      "name": "image 4",
+      "effects": [
+        {
+          "type": "DROP_SHADOW",
+          "visible": true,
+          "color": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0.25
+          },
+          "blendMode": "NORMAL",
+          "offset": {
+            "x": 0,
+            "y": 4
+          },
+          "radius": 4,
+          "showShadowBehindNode": false
+        }
+      ]
+    }
+  ],
+  "buttons": [
+    {
+      "name": "Buttons",
+      "type": "FRAME",
+      "cornerRadius": 24,
+      "paddingLeft": 64,
+      "paddingRight": 64,
+      "paddingTop": 48,
+      "paddingBottom": 48
+    },
+    {
+      "name": "Button",
+      "type": "TEXT"
+    },
+    {
+      "name": "Button/Primary-Large",
+      "type": "COMPONENT_SET",
+      "cornerRadius": 5
+    },
+    {
+      "name": "State=Default, Icon=no",
+      "type": "COMPONENT",
+      "cornerRadius": 8,
+      "paddingLeft": 24,
+      "paddingRight": 24,
+      "paddingTop": 16,
+      "paddingBottom": 16,
+      "itemSpacing": 10
+    },
+    {
+      "name": "Button",
+      "type": "TEXT"
+    },
+    {
+      "name": "State=Hover, Icon=no",
+      "type": "COMPONENT",
+      "cornerRadius": 8,
+      "paddingLeft": 24,
+      "paddingRight": 24,
+      "paddingTop": 16,
+      "paddingBottom": 16,
+      "itemSpacing": 10
+    },
+    {
+      "name": "Button",
+      "type": "TEXT"
+    },
+    {
+      "name": "State=Pressed, Icon=no",
+      "type": "COMPONENT",
+      "cornerRadius": 8,
+      "paddingLeft": 24,
+      "paddingRight": 24,
+      "paddingTop": 16,
+      "paddingBottom": 16,
+      "itemSpacing": 10
+    },
+    {
+      "name": "Button",
+      "type": "TEXT"
+    },
+    {
+      "name": "State=Disabled, Icon=no",
+      "type": "COMPONENT",
+      "cornerRadius": 8,
+      "paddingLeft": 24,
+      "paddingRight": 24,
+      "paddingTop": 16,
+      "paddingBottom": 16,
+      "itemSpacing": 10
+    },
+    {
+      "name": "Button",
+      "type": "TEXT"
+    },
+    {
+      "name": "State=Default, Icon=yes",
+      "type": "COMPONENT",
+      "cornerRadius": 8,
+      "paddingLeft": 24,
+      "paddingRight": 24,
+      "paddingTop": 12,
+      "paddingBottom": 12,
+      "itemSpacing": 10
+    },
+    {
+      "name": "vuesax/linear/call-calling",
+      "type": "INSTANCE"
+    },
+    {
+      "name": "Button",
+      "type": "TEXT"
+    },
+    {
+      "name": "State=Hover, Icon=yes",
+      "type": "COMPONENT",
+      "cornerRadius": 8,
+      "paddingLeft": 24,
+      "paddingRight": 24,
+      "paddingTop": 12,
+      "paddingBottom": 12,
+      "itemSpacing": 10
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#002D7A" />
+      <stop offset="50%" stop-color="#00215C" />
+      <stop offset="100%" stop-color="#001438" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#255CC1" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#255CC1" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background with subtle brand curve -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#255CC1" stroke-width="3" stroke-opacity="0.25" stroke-dasharray="12 12" />
+
+  <!-- Center Shield/Bubble Backdrop -->
+  <g filter="url(#glow)">
+    <!-- Central Microphone and Waves -->
+    <!-- Sound Waves Left -->
+    <path d="M148 200 C132 230 132 282 148 312" fill="none" stroke="#38BDF8" stroke-width="14" stroke-linecap="round" />
+    <path d="M116 172 C92 216 92 296 116 340" fill="none" stroke="#255CC1" stroke-width="12" stroke-linecap="round" stroke-opacity="0.75" />
+
+    <!-- Sound Waves Right -->
+    <path d="M364 200 C380 230 380 282 364 312" fill="none" stroke="#38BDF8" stroke-width="14" stroke-linecap="round" />
+    <path d="M396 172 C420 216 420 296 396 340" fill="none" stroke="#255CC1" stroke-width="12" stroke-linecap="round" stroke-opacity="0.75" />
+
+    <!-- Mic Capsule Body -->
+    <rect x="220" y="148" width="72" height="136" rx="36" fill="url(#accentGrad)" />
+    <!-- Capsule inner accent line -->
+    <rect x="228" y="156" width="56" height="60" rx="28" fill="#FFFFFF" fill-opacity="0.2" />
+
+    <!-- Mic Cradle / Arc -->
+    <path d="M192 236 C192 296 232 328 256 328 C280 328 320 296 320 236" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" />
+
+    <!-- Mic Stem & Base -->
+    <path d="M256 328 L256 376" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" />
+    <path d="M208 376 L304 376" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" />
+  </g>
+
+  <!-- AI Sparkle Indicator -->
+  <g transform="translate(320, 130)">
+    <path d="M24 0 L29 16 L45 21 L29 26 L24 42 L19 26 L3 21 L19 16 Z" fill="#38BDF8" />
+  </g>
+</svg>
