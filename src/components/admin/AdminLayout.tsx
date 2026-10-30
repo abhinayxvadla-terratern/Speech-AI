@@ -85,9 +85,9 @@ export const AdminLayout: React.FC = () => {
   const currentRole = role || 'admin';
 
   return (
-    <div className="min-h-screen bg-[#FAFBFF] text-[#111111] flex flex-col md:flex-row w-full font-body select-none">
+    <div className="min-h-screen min-h-[100dvh] md:h-screen md:h-[100dvh] md:overflow-hidden bg-[#FAFBFF] text-[#111111] flex flex-col md:flex-row w-full font-body select-none">
       {/* Desktop Admin Sidebar (Hidden on mobile < md, visible on md+) */}
-      <aside className="hidden md:flex w-68 bg-white border-r border-slate-200/90 flex-col shrink-0 min-h-screen sticky top-0 h-screen z-20">
+      <aside className="hidden md:flex md:w-60 lg:w-68 bg-white border-r border-slate-200/90 flex-col shrink-0 h-full z-20">
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-100">
           <div className="flex items-center gap-3">
@@ -219,7 +219,7 @@ export const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden min-w-0">
+      <div className="flex-1 flex flex-col min-h-screen md:min-h-0 md:h-full md:overflow-y-auto overflow-x-hidden min-w-0">
         {/* Mobile Top Header (Visible < md) */}
         <header className="md:hidden sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 py-3 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2.5">

@@ -246,27 +246,30 @@ export class RealVoiceAdapter implements VoiceAdapter {
     if (session.hasClosed || session.strikes >= 3) return;
 
     if (!session.turnSilenceCheckInGiven) {
-      // First occurrence on a given turn: do NOT strike yet — give one gentle check-in
+      // First occurrence on a given turn: gentle, human check-in
       session.turnSilenceCheckInGiven = true;
-      await this.speak(session.handle, 'Take your time — are you still there?');
-      // speak() automatically enters idle and schedules the second 15s timer
+      const isInterview = session.context.tab === 'interview';
+      const prompt = isInterview
+        ? "Nehmen Sie sich ruhig Zeit. Antworten Sie einfach, sobald Sie bereit sind."
+        : "Take your time. Whenever you're ready, speak the phrase in German.";
+      await this.speak(session.handle, prompt);
     } else {
-      // Still no response after that: add 1 strike, then move on
+      // Second consecutive silence: increment strike and offer warm guidance
       session.strikes += 1;
       session.turnSilenceCheckInGiven = false;
 
       if (session.strikes >= 3) {
-        const signOff = "Let's pick this back up another time — great effort today.";
+        const signOff = "Let's pause our workout here for today — excellent effort practicing your spoken German.";
         await this.speak(session.handle, signOff);
         const lastTurn = session.turns[session.turns.length - 1];
         if (lastTurn) lastTurn.sessionEnded = true;
         this.notifySessionEnded(session, 'strikes_exceeded');
       } else {
         const nextPrompt = session.context.mode === 'learn'
-          ? "No worries, let's keep going. Try the phrase whenever you are ready."
+          ? "No stress at all. Whenever you're ready, try the sentence again with natural cadence."
           : (session.context.tab === 'interview'
-              ? "No worries, let's keep going. Können Sie mir dazu noch etwas mehr sagen?"
-              : "No worries, let's keep going. Erzählen Sie mir gerne weiter.");
+              ? "Kein Problem. Können Sie mir dazu vielleicht ein kurzes Beispiel aus Ihrer Praxis nennen?"
+              : "Keine Sorge. Fahren Sie einfach fort, wenn Sie bereit sind.");
         await this.speak(session.handle, nextPrompt);
       }
     }

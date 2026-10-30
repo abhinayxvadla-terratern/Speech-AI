@@ -348,7 +348,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
               {/* Dropdown Popover Menu */}
               {dropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-white rounded-2xl border border-slate-200 shadow-xl p-1.5 space-y-1 animate-fadeIn">
+                <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-white rounded-2xl border border-slate-200 shadow-xl p-1.5 space-y-1 animate-fadeIn max-h-60 overflow-y-auto">
                   {CATEGORIES.map((cat) => {
                     const Icon = cat.icon;
                     const isChecked = selectedCategories.includes(cat.value);

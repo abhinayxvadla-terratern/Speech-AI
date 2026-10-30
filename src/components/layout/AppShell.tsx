@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { 
   Home, 
@@ -31,10 +31,15 @@ export const AppShell: React.FC = () => {
   const { profile, signOut } = useAuth();
   const { isSessionActive } = useActiveSession();
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
 
-  // Crucial: Whenever the user navigates to a new tab/route, immediately halt any active TTS audio
+  // Crucial: Whenever the user navigates to a new tab/route, halt any active TTS audio & scroll to top
   useEffect(() => {
     realVoiceAdapter.stopSpeaking?.();
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    }
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }, [location.pathname]);
 
   const isExactActive = (to: string) => {
@@ -43,11 +48,11 @@ export const AppShell: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFBFF] text-[#111111] flex flex-col md:flex-row w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen min-h-[100dvh] md:h-screen md:h-[100dvh] md:overflow-hidden bg-[#FAFBFF] text-[#111111] flex flex-col md:flex-row w-full max-w-full">
       {/* Desktop Sidebar (hidden on mobile, visible md+) */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200/90 min-h-screen sticky top-0 shrink-0 select-none z-30">
+      <aside className="hidden md:flex flex-col md:w-60 lg:w-64 bg-white border-r border-slate-200/90 h-full shrink-0 select-none z-30">
         {/* App Brand Header */}
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-5 lg:p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <AppLogo size="md" className="drop-shadow-xs" />
             <div>
@@ -62,7 +67,7 @@ export const AppShell: React.FC = () => {
         </div>
 
         {/* Desktop Navigation Links */}
-        <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-5 lg:py-6 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isExactActive(item.to);
@@ -87,7 +92,7 @@ export const AppShell: React.FC = () => {
         </nav>
 
         {/* User Card & Logout (Desktop Bottom) */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
           <div className="flex items-center justify-between gap-3 mb-3 px-1">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-full bg-[#00215C] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
@@ -107,7 +112,7 @@ export const AppShell: React.FC = () => {
           </div>
           <button
             onClick={() => signOut()}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50/80 rounded-xl transition-colors border border-slate-200/60 bg-white"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50/80 rounded-xl transition-colors border border-slate-200/60 bg-white cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>
@@ -117,7 +122,7 @@ export const AppShell: React.FC = () => {
 
       {/* Mobile Top App Header (Hidden during active voice sessions to avoid redundant double-headers) */}
       {!isSessionActive && (
-        <header className="md:hidden sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 py-3 flex items-center justify-between shadow-xs">
+        <header className="md:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 py-3 flex items-center justify-between shadow-xs shrink-0">
           <div className="flex items-center gap-2.5">
             <AppLogo size="sm" className="drop-shadow-xs" />
             <h1 className="font-heading font-extrabold text-lg text-[#00215C] tracking-tight leading-none">
@@ -127,20 +132,30 @@ export const AppShell: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {profile?.primary_domain && (
-              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full truncate max-w-[140px]">
+              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full truncate max-w-[130px]">
                 {profile.primary_domain}
               </span>
             )}
+            <NavLink
+              to="/profile"
+              className="w-8 h-8 rounded-full bg-[#00215C] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs active:scale-95 transition-transform"
+              title="Profile & Settings"
+            >
+              {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
+            </NavLink>
           </div>
         </header>
       )}
 
       {/* Main Content Area */}
-      <main className={`flex-1 min-w-0 ${
-        isSessionActive 
-          ? 'pb-4 pt-1 md:pt-4' 
-          : 'pb-28 sm:pb-32 md:pb-8 pt-2 md:pt-6'
-      } px-3 sm:px-6 md:px-8 max-w-7xl mx-auto w-full`}>
+      <main
+        ref={mainRef}
+        className={`flex-1 min-w-0 md:h-full md:overflow-y-auto ${
+          isSessionActive 
+            ? 'pb-4 pt-1 md:pt-4' 
+            : 'pb-28 sm:pb-32 md:pb-8 pt-2 md:pt-6'
+        } px-3 sm:px-6 md:px-6 lg:px-8 max-w-7xl mx-auto w-full`}
+      >
         <Outlet />
       </main>
 
@@ -148,7 +163,7 @@ export const AppShell: React.FC = () => {
       {!isSessionActive && (
         <nav 
           aria-label="Mobile Navigation"
-          className="md:hidden fixed z-40 left-4 right-4 max-w-md mx-auto bg-white border border-slate-200/90 rounded-2xl shadow-[0_10px_28px_rgba(0,33,92,0.12),0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden"
+          className="md:hidden fixed z-40 left-3 right-3 sm:left-4 sm:right-4 max-w-md mx-auto bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-[0_10px_28px_rgba(0,33,92,0.12),0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden"
           style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
         >
           <div className="grid grid-cols-5 h-16 items-center px-1">
@@ -159,16 +174,16 @@ export const AppShell: React.FC = () => {
                 <NavLink
                   key={item.label}
                   to={item.to}
-                  className={`flex flex-col items-center justify-center py-1 select-none transition-colors duration-150 ${
+                  className={`flex flex-col items-center justify-center py-1 select-none transition-colors duration-150 min-w-0 ${
                     active
                       ? 'text-[#255CC1]'
                       : 'text-slate-600 hover:text-[#00215C]'
                   }`}
                 >
                   <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-[#EBF2FF]' : ''}`}>
-                    <Icon className={`w-5 h-5 ${active ? 'text-[#255CC1] stroke-[2.3]' : 'text-slate-500 stroke-[1.8]'}`} />
+                    <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${active ? 'text-[#255CC1] stroke-[2.3]' : 'text-slate-500 stroke-[1.8]'}`} />
                   </div>
-                  <span className={`text-[11px] mt-0.5 leading-tight ${active ? 'font-bold text-[#255CC1]' : 'font-medium text-slate-600'}`}>
+                  <span className={`text-[10px] sm:text-[11px] mt-0.5 leading-tight truncate px-0.5 ${active ? 'font-bold text-[#255CC1]' : 'font-medium text-slate-600'}`}>
                     {item.label}
                   </span>
                 </NavLink>

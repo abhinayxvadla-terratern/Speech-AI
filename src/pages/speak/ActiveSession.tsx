@@ -255,10 +255,10 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
           setTimeout(() => {
             if (!active) return;
             if (mode === 'learn') {
-              const englishMeaning = targetPhrases[0]?.english ? ` meaning "${targetPhrases[0].english}"` : '';
+              const englishMeaning = targetPhrases[0]?.english ? ` ("${targetPhrases[0].english}")` : '';
               const segments = [
                 {
-                  text: `Welcome to Module ${module.module_number}: ${module.title}. In this session, we practice ${module.micro_skill || 'this German sentence'}${englishMeaning}. Listen to how it sounds in German:`,
+                  text: `Welcome to ${module.title}. Today, we master: "${primaryTargetPhrase}"${englishMeaning}. Listen closely:`,
                   lang: 'en' as const,
                 },
                 {
@@ -266,7 +266,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
                   lang: 'de' as const,
                 },
                 {
-                  text: `Now it's your turn. Please repeat the phrase in German.`,
+                  text: `Now, speak with natural cadence. Whenever you're ready, recite the sentence in German.`,
                   lang: 'en' as const,
                 },
               ];
@@ -278,7 +278,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
             } else {
               const segments = [
                 {
-                  text: `Starting your practice simulation for ${module.title}. From this point on, please reply in German.`,
+                  text: `Starting your practice simulation for ${module.title}. Speak with natural German phrasing:`,
                   lang: 'en' as const,
                 },
                 {
@@ -405,31 +405,31 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
   };
 
   return (
-    <div className="max-w-3xl mx-auto flex flex-col min-h-[calc(100vh-8rem)] text-[#111111] animate-fadeIn">
-      {/* Top Navigation Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+    <div className="max-w-3xl mx-auto flex flex-col min-h-[calc(100dvh-6rem)] text-[#111111] animate-fadeIn">
+      {/* Top Workout Status Bar */}
+      <header className="bg-white/95 backdrop-blur-md sticky top-0 z-20 rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={handleBack}
-            className="p-2 -ml-1 rounded-xl text-slate-600 hover:text-[#00215C] hover:bg-slate-100 transition-colors"
-            title="Back to curriculum"
+            className="p-2 -ml-1 rounded-xl text-slate-600 hover:text-[#00215C] hover:bg-slate-100 transition-colors shrink-0"
+            title="Exit workout"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                 Module {module.module_number}
               </span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                 mode === 'learn'
-                  ? 'bg-blue-50 text-[#255CC1] border border-blue-200'
-                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+                  ? 'bg-blue-50 text-[#255CC1] border border-blue-200/80'
+                  : 'bg-amber-50 text-amber-800 border border-amber-200/80'
               }`}>
-                {mode === 'learn' ? 'Learn Mode' : 'Practice Mode'}
+                {mode === 'learn' ? 'Learn & Recite' : 'Simulation'}
               </span>
               {targetSeconds ? (
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
                   isTimeUp
                     ? 'bg-rose-50 border-rose-200 text-rose-700 animate-pulse'
                     : 'bg-slate-100 border-slate-200/60 text-slate-700'
@@ -439,60 +439,61 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
                 </span>
               ) : durationMinutes ? (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60">
-                  {durationMinutes === 'open' ? 'Open-ended' : `${durationMinutes}m`}
+                  {durationMinutes === 'open' ? 'Open Workout' : `${durationMinutes}m`}
                 </span>
               ) : null}
             </div>
-            <h2 className="font-heading font-extrabold text-base sm:text-lg text-[#00215C] truncate max-w-xs sm:max-w-md">
+            <h1 className="font-heading font-extrabold text-sm sm:text-base text-[#00215C] truncate mt-0.5">
               {module.title}
-            </h2>
+            </h1>
           </div>
         </div>
 
         <button
           onClick={handleFinishSession}
           disabled={isFinishing || turns.length === 0}
-          className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors disabled:opacity-40 flex items-center gap-1.5 border border-slate-200/60"
+          className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-[#00215C] text-white text-xs font-bold transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
         >
           {isFinishing ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
-            <Square className="w-3 h-3 text-slate-600 fill-slate-600" />
+            <Square className="w-3 h-3 fill-white" />
           )}
-          <span>Finish Session</span>
+          <span>Complete Workout</span>
         </button>
-      </div>
+      </header>
 
-      {/* Target Phrase Banner (Visible in Learn Mode, hidden in Practice Mode) */}
+      {/* Target Phrase Teleprompter Stage (Learn Mode) */}
       {mode === 'learn' && primaryTargetPhrase && (
-        <div className="mb-4 p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-2">
+        <div className="mb-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-              Target Phrase (Speak this in German)
+              Target German Phrase
             </span>
             {domainVariant && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#255CC1] border border-blue-200">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/60">
                 {userDomain}
               </span>
             )}
           </div>
-          <p className="font-heading font-bold text-base sm:text-lg text-[#00215C]">
-            "{primaryTargetPhrase}"
+          <p className="font-heading font-extrabold text-lg sm:text-xl text-[#00215C] leading-snug tracking-tight">
+            &ldquo;{primaryTargetPhrase}&rdquo;
           </p>
           {targetPhrases[0]?.english && (
-            <p className="text-xs text-slate-500 font-normal italic">
-              Meaning: {targetPhrases[0].english}
+            <p className="text-xs text-slate-600 font-medium italic border-t border-slate-100 pt-2 flex items-center gap-1.5">
+              <span className="text-slate-400 not-italic font-bold text-[10px] uppercase">Meaning:</span>
+              <span>{targetPhrases[0].english}</span>
             </p>
           )}
         </div>
       )}
 
       {errorMsg && (
-        <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-2 shadow-xs animate-fadeIn">
+        <div className="mb-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-2 shadow-xs animate-fadeIn">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-            <span>{errorMsg}</span>
+            <span className="font-medium">{errorMsg}</span>
           </div>
           <button
             onClick={() => setErrorMsg(null)}
@@ -504,8 +505,8 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
         </div>
       )}
 
-      {/* Transcript Conversation Area */}
-      <div className="flex-1 space-y-3.5 py-2 overflow-y-auto px-1">
+      {/* Transcript Conversation Area with Guaranteed Bottom Clearance */}
+      <div className="flex-1 space-y-3.5 py-2 overflow-y-auto px-1 pb-36">
         {turns.length === 0 ? (
           <div className="py-14 text-center text-slate-400 bg-white rounded-2xl border border-slate-200/70 p-6 shadow-xs">
             <Volume2 className="w-8 h-8 mx-auto text-slate-300 mb-2" />

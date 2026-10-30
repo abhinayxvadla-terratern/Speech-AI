@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mic, Volume2, Loader2, Pause, Play, Send, AlertCircle, Sparkles } from 'lucide-react';
+import { Mic, Volume2, Loader2, Pause, Play, Check, AlertCircle, Sparkles } from 'lucide-react';
 import { VoiceState } from '../../services/voice/types';
 
 export interface AutoTurnStatusDockProps {
@@ -34,18 +34,18 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
   const isAgentSpeaking = voiceState === 'speaking';
   const isProcessing = voiceState === 'processing';
 
-  // Scaled bar heights for dynamic audio wave feedback
+  // Dynamic bar height proportional to user vocal volume
   const dynamicHeight = Math.max(6, Math.min(26, Math.round((volumeLevel / 100) * 26)));
 
   return (
     <div
       style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
-      className={`sticky z-30 max-w-xl mx-auto w-full px-2 transition-all duration-200 ${className}`}
+      className={`sticky z-30 max-w-xl mx-auto w-full px-3 transition-all duration-200 ${className}`}
     >
-      <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-2xl sm:rounded-full px-4 sm:px-6 py-2.5 sm:py-3 flex flex-col gap-2">
+      <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-[0_12px_36px_rgba(0,33,92,0.12),0_2px_8px_rgba(0,0,0,0.04)] rounded-2xl sm:rounded-full px-4 sm:px-6 py-2.5 sm:py-3 flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3 w-full">
           {/* =========================================================================
-              STATE 1: AGENT SPEAKING (TTS Playing - VAD is OFF)
+              STATE 1: AGENT SPEAKING (TTS Playing)
           ========================================================================= */}
           {isAgentSpeaking && (
             <div className="flex items-center justify-between w-full animate-fadeIn">
@@ -60,32 +60,32 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                   <p className="text-xs sm:text-sm font-bold text-[#00215C] leading-none">
                     {agentName} is speaking
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-1 leading-none">
+                  <p className="text-[11px] text-slate-500 mt-1 leading-none font-medium">
                     Listening resumes automatically
                   </p>
                 </div>
               </div>
-              <div className="w-8 h-8 rounded-full bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-full bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center shrink-0 shadow-xs">
                 <Volume2 className="w-4 h-4 animate-pulse" />
               </div>
             </div>
           )}
 
           {/* =========================================================================
-              STATE 2: PROCESSING (STT / LLM Running)
+              STATE 2: PROCESSING (STT / LLM Evaluation)
           ========================================================================= */}
           {isProcessing && (
             <div className="flex items-center justify-between w-full animate-fadeIn">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200/80 flex items-center justify-center shrink-0">
                   <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm font-bold text-amber-950 leading-none">
-                    Processing response...
+                  <p className="text-xs sm:text-sm font-bold text-slate-900 leading-none">
+                    Analyzing spoken German...
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-1 leading-none">
-                    Transcribing & analyzing German speech
+                  <p className="text-[11px] text-slate-500 mt-1 leading-none font-medium">
+                    Evaluating pronunciation & fluency
                   </p>
                 </div>
               </div>
@@ -105,11 +105,11 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                       <Pause className="w-3.5 h-3.5 text-slate-500" />
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm font-bold text-slate-700 leading-none">
-                        Listening paused
+                      <p className="text-xs sm:text-sm font-bold text-slate-800 leading-none">
+                        Workout paused
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-1 leading-none">
-                        Tap resume when ready
+                      <p className="text-[11px] text-slate-500 mt-1 leading-none font-medium">
+                        Tap resume when ready to speak
                       </p>
                     </div>
                   </div>
@@ -124,7 +124,7 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                   )}
                 </div>
               ) : isUserSpeaking ? (
-                // Sub-state: User Speech Detected (Live Volume Wave & Action)
+                // Sub-state: User Speaking (Live Kinetic Audio Meter)
                 <div className="flex items-center justify-between w-full animate-fadeIn">
                   <div className="flex items-center gap-3 min-w-0">
                     {/* Live Audio Meter Bars */}
@@ -147,12 +147,12 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                       />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs sm:text-sm font-bold text-emerald-800 leading-none flex items-center gap-1.5">
-                        <span>Recording speech...</span>
+                      <p className="text-xs sm:text-sm font-bold text-emerald-900 leading-none flex items-center gap-1.5">
+                        <span>Hearing you clearly</span>
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-1 leading-none truncate">
-                        {interimTranscript ? 'Transcribing live...' : 'Speak in German, pause when finished'}
+                      <p className="text-[11px] text-slate-500 mt-1 leading-none font-medium truncate">
+                        {interimTranscript ? 'Transcribing live...' : 'Pause when finished or tap Finish'}
                       </p>
                     </div>
                   </div>
@@ -162,8 +162,8 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                       onClick={onManualSubmit}
                       className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-[0.98] shrink-0"
                     >
-                      <Send className="w-3 h-3" />
-                      <span>Send Turn</span>
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Finish Speaking</span>
                     </button>
                   )}
                 </div>
@@ -172,7 +172,7 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                 <div className="flex items-center justify-between w-full animate-fadeIn gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span className="text-xs text-amber-800 font-medium truncate">
+                    <span className="text-xs text-amber-900 font-semibold truncate">
                       {vadError.length > 50 ? 'Microphone setup required' : vadError}
                     </span>
                   </div>
@@ -188,12 +188,12 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                   </button>
                 </div>
               ) : (
-                // Sub-state: Active Listening
+                // Sub-state: Active Listening (Ready for learner)
                 <div className="flex items-center justify-between w-full animate-fadeIn">
                   <div className="flex items-center gap-3">
                     <div className="relative flex items-center justify-center">
                       <span className="absolute w-8 h-8 rounded-full bg-blue-100 animate-ping opacity-60" />
-                      <div className="w-8 h-8 rounded-full bg-[#EBF2FF] border border-blue-200 flex items-center justify-center text-[#255CC1] relative z-10">
+                      <div className="w-8 h-8 rounded-full bg-[#EBF2FF] border border-blue-200/80 flex items-center justify-center text-[#255CC1] relative z-10 shadow-xs">
                         <Mic className="w-4 h-4 animate-pulse" />
                       </div>
                     </div>
@@ -201,8 +201,8 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                       <p className="text-xs sm:text-sm font-bold text-[#00215C] leading-none">
                         Listening...
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-1 leading-none">
-                        Speak naturally in German
+                      <p className="text-[11px] text-slate-500 mt-1 leading-none font-medium">
+                        Take your time and speak in German
                       </p>
                     </div>
                   </div>
@@ -211,7 +211,7 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                     {onManualStartSpeaking && (
                       <button
                         onClick={onManualStartSpeaking}
-                        className="px-3 py-1 rounded-full bg-[#EBF2FF] hover:bg-blue-100 text-[#255CC1] text-xs font-semibold transition-colors flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-full bg-[#EBF2FF] hover:bg-blue-100 text-[#255CC1] text-xs font-semibold transition-colors flex items-center gap-1.5"
                         title="Tap to speak manually"
                       >
                         <Mic className="w-3 h-3" />
@@ -222,7 +222,7 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                       <button
                         onClick={onTogglePause}
                         className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                        title="Pause listening"
+                        title="Pause workout"
                       >
                         <Pause className="w-4 h-4" />
                       </button>
@@ -236,9 +236,9 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
 
         {/* Live Interim Transcript Bubble (Visible when user speaks) */}
         {isUserSpeaking && interimTranscript && (
-          <div className="w-full pt-1 pb-0.5 border-t border-slate-100 flex items-center gap-2 animate-fadeIn">
+          <div className="w-full pt-1.5 pb-0.5 border-t border-slate-100 flex items-center gap-2 animate-fadeIn">
             <Sparkles className="w-3 h-3 text-[#255CC1] shrink-0" />
-            <p className="text-xs text-slate-700 italic truncate font-medium">
+            <p className="text-xs text-slate-800 italic truncate font-semibold">
               &ldquo;{interimTranscript}&rdquo;
             </p>
           </div>
