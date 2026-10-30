@@ -63,6 +63,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
   const [turns, setTurns] = useState<TranscriptTurn[]>(initialTranscript);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState<boolean>(false);
+  const [isRepeatedMistakePause, setIsRepeatedMistakePause] = useState<boolean>(false);
 
   // Timer State (for timed checkpoint sessions)
   const [secondsElapsed, setSecondsElapsed] = useState<number>(0);
@@ -206,11 +207,14 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
 
         // 4. Register session ended listener
         if (voiceAdapter.onSessionEnded) {
-          cleanupSessionEnded = voiceAdapter.onSessionEnded(handle, () => {
+          cleanupSessionEnded = voiceAdapter.onSessionEnded(handle, (reason) => {
             if (active) {
+              if (reason === 'repeated_mistake_threshold') {
+                setIsRepeatedMistakePause(true);
+              }
               setTimeout(() => {
                 if (active) handleFinishRef.current();
-              }, 2500);
+              }, reason === 'repeated_mistake_threshold' ? 1200 : 2500);
             }
           });
         }
@@ -248,15 +252,45 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
         // 6. Proactive AI Guidance: In all modules, the AI speaks first and guides the user
         if (!hasSpokenOpenerRef.current && (!initialTranscript || initialTranscript.length === 0)) {
           hasSpokenOpenerRef.current = true;
-          const openerText = mode === 'learn'
-            ? `Hallo! Welcome to Module ${module.module_number}: ${module.title}. Let's practice our target phrase: "${primaryTargetPhrase}". Please repeat after me: "${primaryTargetPhrase}"`
-            : (module.is_checkpoint
-                ? `Hallo! Wir starten Ihre Praxis-Situation für "${module.title}". Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`
-                : `Hallo! Wir starten die Übungssimulation für "${module.title}". Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`);
-
           setTimeout(() => {
-            if (active) {
-              voiceAdapter.speak(handle, openerText).catch((e) => console.warn('Opener speak notice:', e));
+            if (!active) return;
+            if (mode === 'learn') {
+              const englishMeaning = targetPhrases[0]?.english ? ` meaning "${targetPhrases[0].english}"` : '';
+              const segments = [
+                {
+                  text: `Welcome to Module ${module.module_number}: ${module.title}. In this session, we practice ${module.micro_skill || 'this German sentence'}${englishMeaning}. Listen to how it sounds in German:`,
+                  lang: 'en' as const,
+                },
+                {
+                  text: primaryTargetPhrase,
+                  lang: 'de' as const,
+                },
+                {
+                  text: `Now it's your turn. Please repeat the phrase in German.`,
+                  lang: 'en' as const,
+                },
+              ];
+              if (voiceAdapter.speakSegments) {
+                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
+              } else {
+                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
+              }
+            } else {
+              const segments = [
+                {
+                  text: `Starting your practice simulation for ${module.title}. From this point on, please reply in German.`,
+                  lang: 'en' as const,
+                },
+                {
+                  text: `Hallo! Wir starten Ihre Praxis-Situation für "${module.title}". Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`,
+                  lang: 'de' as const,
+                },
+              ];
+              if (voiceAdapter.speakSegments) {
+                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
+              } else {
+                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
+              }
             }
           }, 350);
         }
@@ -602,9 +636,10 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
           subtitle={`${mode === 'learn' ? 'Learn Session' : 'Practice Simulation'} • Module ${module.module_number}: ${module.title}`}
           mode={mode}
           recap={completedSummary}
-          actionButtonText="Continue to Modules"
+          actionButtonText={isRepeatedMistakePause ? "Review Completed • Exit" : "Continue to Modules"}
           onActionButtonClick={onCompleted}
           sessionId={dbSessionId}
+          isRepeatedMistakePause={isRepeatedMistakePause}
         />
       )}
     </div>

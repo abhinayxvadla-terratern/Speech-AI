@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Award, HelpCircle } from 'lucide-react';
+import { Award, HelpCircle, BookOpen, AlertTriangle } from 'lucide-react';
 import { DiagnosticRecapResult } from '../services/diagnosticService';
 import { FeedbackModal } from './feedback/FeedbackModal';
 
@@ -13,6 +13,7 @@ interface SessionDetailModalProps {
   actionButtonText: string;
   onActionButtonClick: () => void;
   sessionId?: string | null;
+  isRepeatedMistakePause?: boolean;
 }
 
 export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
@@ -24,6 +25,7 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
   actionButtonText,
   onActionButtonClick,
   sessionId = null,
+  isRepeatedMistakePause = false,
 }) => {
   const [feedbackOpen, setFeedbackOpen] = useState<boolean>(false);
 
@@ -37,19 +39,44 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
       <div className="bg-white rounded-2xl p-5 sm:p-7 max-w-lg w-full max-h-[90vh] flex flex-col shadow-xl border border-slate-200/80 animate-fadeIn my-auto text-[#111111]">
         {/* Modal Header */}
         <div className="shrink-0 text-center pb-2">
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center mx-auto border border-blue-100 shadow-xs mb-3">
-            <Award className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mx-auto border shadow-xs mb-3 ${
+            isRepeatedMistakePause
+              ? 'bg-amber-50 text-amber-700 border-amber-200'
+              : 'bg-[#EBF2FF] text-[#255CC1] border-blue-100'
+          }`}>
+            {isRepeatedMistakePause ? (
+              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
+            ) : (
+              <Award className="w-5 h-5 sm:w-6 sm:h-6" />
+            )}
           </div>
-          <span className="text-[10px] sm:text-[11px] font-bold text-[#255CC1] uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#EBF2FF] border border-blue-100">
-            Session Completed
+          <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+            isRepeatedMistakePause
+              ? 'bg-amber-50 text-amber-800 border-amber-200'
+              : 'bg-[#EBF2FF] text-[#255CC1] border-blue-100'
+          }`}>
+            {isRepeatedMistakePause ? 'Manual Review Required' : 'Session Completed'}
           </span>
           <h3 className="font-heading font-extrabold text-lg sm:text-2xl text-[#00215C] mt-2">
-            {title}
+            {isRepeatedMistakePause ? 'Time to Review & Read' : title}
           </h3>
           <p className="text-xs text-slate-500 mt-1 font-normal">
             {subtitle}
           </p>
         </div>
+
+        {/* 5-Mistake Threshold Notice Banner */}
+        {isRepeatedMistakePause && (
+          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5 my-1">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-amber-950">5 Repeated Mistakes Detected</p>
+              <p className="mt-0.5 text-amber-800 leading-relaxed font-normal">
+                Let's step back from voice practice for a moment. Please read the correct grammatical pattern and example corrections below at your own pace before trying again.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Scrollable Body Content */}
         <div className="flex-1 overflow-y-auto pr-1 space-y-4 py-2">

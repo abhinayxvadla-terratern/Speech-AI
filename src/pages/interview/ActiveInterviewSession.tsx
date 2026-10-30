@@ -76,6 +76,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
   const [turns, setTurns] = useState<TranscriptTurn[]>(initialTranscript);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState<boolean>(false);
+  const [isRepeatedMistakePause, setIsRepeatedMistakePause] = useState<boolean>(false);
   const [showSampleQuestions, setShowSampleQuestions] = useState<boolean>(false);
 
   // Timer State
@@ -216,11 +217,14 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
 
         // 4. Register session ended listener
         if (voiceAdapter.onSessionEnded) {
-          cleanupSessionEnded = voiceAdapter.onSessionEnded(handle, () => {
+          cleanupSessionEnded = voiceAdapter.onSessionEnded(handle, (reason) => {
             if (active) {
+              if (reason === 'repeated_mistake_threshold') {
+                setIsRepeatedMistakePause(true);
+              }
               setTimeout(() => {
                 if (active) handleFinishRef.current();
-              }, 2500);
+              }, reason === 'repeated_mistake_threshold' ? 1200 : 2500);
             }
           });
         }
@@ -259,15 +263,60 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
         if (!hasSpokenOpenerRef.current && (!initialTranscript || initialTranscript.length === 0)) {
           hasSpokenOpenerRef.current = true;
           const firstQuestion = sampleQuestions[0]?.german || 'Können Sie sich bitte kurz vorstellen und Ihren Werdegang beschreiben?';
-          const openerText = isExamMode && examPromptText
-            ? `Willkommen zur mündlichen Prüfung. ${examPromptText.german || firstQuestion}`
-            : (mode === 'learn'
-                ? `Welcome to your interview coaching for ${interviewTypeName}. Let's begin with our first question: "${firstQuestion}". Bitte antworten Sie auf Deutsch.`
-                : `Guten Tag! Willkommen zu Ihrem Vorstellungsgespräch für ${interviewTypeName}. Lassen Sie uns beginnen: ${firstQuestion}`);
-
           setTimeout(() => {
-            if (active) {
-              voiceAdapter.speak(handle, openerText).catch((e) => console.warn('Opener speak notice:', e));
+            if (!active) return;
+            if (isExamMode && examPromptText) {
+              const segments = [
+                {
+                  text: `Willkommen zur mündlichen Prüfung. ${examPromptText.german || firstQuestion}`,
+                  lang: 'de' as const,
+                },
+              ];
+              if (voiceAdapter.speakSegments) {
+                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
+              } else {
+                voiceAdapter.speak(handle, segments[0].text).catch((e) => console.warn('Opener speak notice:', e));
+              }
+            } else if (mode === 'learn') {
+              const segments = [
+                {
+                  text: `Welcome to your interview coaching for ${interviewTypeName}. The interviewer is about to ask an essential question. Listen carefully:`,
+                  lang: 'en' as const,
+                },
+                {
+                  text: firstQuestion,
+                  lang: 'de' as const,
+                },
+                {
+                  text: `How would you answer this? Please respond in German.`,
+                  lang: 'en' as const,
+                },
+              ];
+              if (voiceAdapter.speakSegments) {
+                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
+              } else {
+                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
+              }
+            } else {
+              const segments = [
+                {
+                  text: `Welcome to your practice interview for ${interviewTypeName}. From this moment on, the interview will be conducted entirely in German. Let's begin.`,
+                  lang: 'en' as const,
+                },
+                {
+                  text: `Guten Tag! Lassen Sie uns direkt beginnen: ${firstQuestion}`,
+                  lang: 'de' as const,
+                },
+                {
+                  text: `Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`,
+                  lang: 'de' as const,
+                },
+              ];
+              if (voiceAdapter.speakSegments) {
+                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
+              } else {
+                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
+              }
             }
           }, 350);
         }
@@ -335,6 +384,14 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
     try {
       setIsFinishing(true);
       setErrorMsg(null);
+
+      if (mode === 'practice' && sessionHandle && voiceAdapter.speakPracticeReview) {
+        try {
+          await voiceAdapter.speakPracticeReview(sessionHandle);
+        } catch (e) {
+          console.warn('Practice review audio skipped:', e);
+        }
+      }
 
       if (sessionHandle) {
         await voiceAdapter.endSession(sessionHandle);
@@ -615,9 +672,10 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           subtitle={`${interviewTypeName} • ${pressureMode} Pressure • ${mode === 'learn' ? 'Learn Session' : 'Practice Simulation'}`}
           mode={mode}
           recap={completedSummary}
-          actionButtonText="Continue to Interview Hub"
+          actionButtonText={isRepeatedMistakePause ? "Review Completed • Exit" : "Continue to Interview Hub"}
           onActionButtonClick={onCompleted}
           sessionId={dbSessionId}
+          isRepeatedMistakePause={isRepeatedMistakePause}
         />
       )}
     </div>

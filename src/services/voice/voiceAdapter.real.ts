@@ -7,6 +7,7 @@ import {
   VoiceState,
   VoiceStateCallback,
   SessionEndedCallback,
+  SpeechSegment,
 } from './types';
 import { supabase } from '../../lib/supabase';
 
@@ -55,6 +56,7 @@ interface InternalSessionState {
   targetPhraseAttempts: number;
   silenceTimeoutId?: any;
   lastLlmProvider?: 'groq' | 'openrouter';
+  mistakeFrequencyMap: Map<string, number>;
 }
 
 export class RealVoiceAdapter implements VoiceAdapter {
@@ -173,6 +175,7 @@ export class RealVoiceAdapter implements VoiceAdapter {
       strikes: 0,
       turnSilenceCheckInGiven: false,
       targetPhraseAttempts: 1,
+      mistakeFrequencyMap: new Map(),
     };
 
     this.sessions.set(sessionId, sessionState);
@@ -1019,9 +1022,17 @@ Return ONLY valid JSON:
           previousCategories.includes(detectedCategory)
         );
 
-        // Always log any detected mistakes silently to session.mistakes
+        // Always log any detected mistakes silently to session.mistakes and track repeated frequency
+        let repeatedMistakeThresholdHit = false;
         newMistakes.forEach((m: any) => {
           if (m && (m.example || m.example_de || m.correction_de || m.correction || m.category)) {
+            const catKey = (m.category || 'grammar').toLowerCase().trim();
+            const count = (session.mistakeFrequencyMap.get(catKey) || 0) + 1;
+            session.mistakeFrequencyMap.set(catKey, count);
+            if (count >= 5) {
+              repeatedMistakeThresholdHit = true;
+            }
+
             session.mistakes.push({
               category: m.category || 'General Usage',
               example_de: transcript,
@@ -1033,6 +1044,19 @@ Return ONLY valid JSON:
             });
           }
         });
+
+        if (repeatedMistakeThresholdHit) {
+          session.hasClosed = true;
+          userTurn.sessionEnded = true;
+          const stopNotice = "Let's pause here. You have encountered this same mistake 5 times. Please take a moment to read and review this manually on your screen, and come back when you're ready.";
+          userTurn.feedback_en = stopNotice;
+          this.notifyTranscript(session, { ...userTurn });
+          await this.speak(sessionHandle, stopNotice);
+          const lastTurn = session.turns[session.turns.length - 1];
+          if (lastTurn) lastTurn.sessionEnded = true;
+          this.notifySessionEnded(session, 'repeated_mistake_threshold');
+          return;
+        }
 
         const replyDe = parsed.reply_de || 'Verstehe, bitte fahren Sie fort.';
         let finalReply = replyDe;
@@ -1176,6 +1200,10 @@ Never put anything in "example" other than the raw transcript. Never include any
         session.feedbacks.push(feedbackEn);
 
         if (!isCorrect && (parsed.category || correction)) {
+          const catKey = (parsed.category || 'Target Structure').toLowerCase().trim();
+          const count = (session.mistakeFrequencyMap.get(catKey) || 0) + 1;
+          session.mistakeFrequencyMap.set(catKey, count);
+
           session.mistakes.push({
             category: parsed.category || 'Vocabulary & Grammar',
             example_de: null,
@@ -1186,6 +1214,19 @@ Never put anything in "example" other than the raw transcript. Never include any
             correction: correction || targetPhrases,
             feedback_en: feedbackEn,
           });
+
+          if (count >= 5) {
+            session.hasClosed = true;
+            userTurn.sessionEnded = true;
+            const stopNotice = "Let's pause here. You have encountered this same mistake 5 times. Please take a moment to read and review this manually on your screen, and come back when you're ready.";
+            userTurn.feedback_en = stopNotice;
+            this.notifyTranscript(session, { ...userTurn });
+            await this.speak(sessionHandle, stopNotice);
+            const lastTurn = session.turns[session.turns.length - 1];
+            if (lastTurn) lastTurn.sessionEnded = true;
+            this.notifySessionEnded(session, 'repeated_mistake_threshold');
+            return;
+          }
         }
 
         await this.speak(sessionHandle, feedbackEn);
@@ -1251,9 +1292,17 @@ detected_mistakes may be an empty array. These are logged silently — never sur
         session.lastLlmProvider = provider;
         userTurn.llm_provider = provider;
 
+        let repeatedPracticeCategory = false;
         if (Array.isArray(parsed.detected_mistakes)) {
           parsed.detected_mistakes.forEach((m: any) => {
             if (m && (m.correction_de || m.correction || m.category)) {
+              const catKey = (m.category || 'grammar').toLowerCase().trim();
+              const count = (session.mistakeFrequencyMap.get(catKey) || 0) + 1;
+              session.mistakeFrequencyMap.set(catKey, count);
+              if (count >= 5) {
+                repeatedPracticeCategory = true;
+              }
+
               session.mistakes.push({
                 category: m.category || 'general',
                 example_de: transcript,
@@ -1265,6 +1314,19 @@ detected_mistakes may be an empty array. These are logged silently — never sur
               });
             }
           });
+        }
+
+        if (repeatedPracticeCategory) {
+          session.hasClosed = true;
+          userTurn.sessionEnded = true;
+          const stopNotice = "Let's pause here. You have encountered this same mistake 5 times. Please take a moment to read and review this manually on your screen, and come back when you're ready.";
+          userTurn.feedback_en = stopNotice;
+          this.notifyTranscript(session, { ...userTurn });
+          await this.speak(sessionHandle, stopNotice);
+          const lastTurn = session.turns[session.turns.length - 1];
+          if (lastTurn) lastTurn.sessionEnded = true;
+          this.notifySessionEnded(session, 'repeated_mistake_threshold');
+          return;
         }
 
         const isNonEngagement = Boolean(parsed.is_non_engagement) || this.checkObviousEnglishOrGibberish(transcript);
@@ -1299,41 +1361,28 @@ detected_mistakes may be an empty array. These are logged silently — never sur
   }
 
   /**
-   * speak(sessionHandle, text):
-   * Send text to Edge TTS (voice: de-DE-KatjaNeural or en-US-JennyNeural for English feedback),
-   * play resulting audio, push turn to session transcript and conversation history.
+   * Internal helper to play a single TTS clip with a specific voice.
    */
-  async speak(sessionHandle: VoiceSessionHandle, text: string): Promise<void> {
-    const session = this.sessions.get(sessionHandle.id);
-    if (!session) {
-      throw new Error(`Session ${sessionHandle.id} does not exist`);
+  private async playTtsClip(
+    text: string,
+    voice: string,
+    signal: AbortSignal,
+    myGen: number
+  ): Promise<void> {
+    if (!text || !text.trim() || this.currentSpeakGen !== myGen || signal.aborted) {
+      return;
     }
-
-    const myGen = ++this.currentSpeakGen;
-    if (this.currentTtsAbortController) {
-      try { this.currentTtsAbortController.abort(); } catch {}
-    }
-    const abortController = new AbortController();
-    this.currentTtsAbortController = abortController;
-
-    this.updateState(session, 'speaking');
-
-    // Determine appropriate voice: English neural voice for English feedback (Learn mode),
-    // de-DE-KatjaNeural for all German speech.
-    const isEnglish = /^[A-Za-z0-9\s.,!?'"()-]+$/.test(text) && !/[äöüßÄÖÜ]/.test(text) && (text.includes('the ') || text.includes('you ') || text.includes('Great ') || text.includes('Good ') || text.includes('Remember '));
-    const voice = isEnglish ? 'en-US-JennyNeural' : 'de-DE-KatjaNeural';
 
     try {
       if (typeof window !== 'undefined') {
-        // Browser environment: stream from Vite dev server / Vercel API endpoint
         const ttsUrl = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`;
-        const res = await fetch(ttsUrl, { signal: abortController.signal });
+        const res = await fetch(ttsUrl, { signal });
 
-        if (this.currentSpeakGen !== myGen) return;
+        if (this.currentSpeakGen !== myGen || signal.aborted) return;
 
         if (res.ok) {
           const blob = await res.blob();
-          if (this.currentSpeakGen !== myGen) return;
+          if (this.currentSpeakGen !== myGen || signal.aborted) return;
 
           const audioUrl = URL.createObjectURL(blob);
           const audio = new Audio(audioUrl);
@@ -1359,20 +1408,19 @@ detected_mistakes may be an empty array. These are logged silently — never sur
                 finish();
               }
             };
-            if (this.currentSpeakGen !== myGen) {
+            if (this.currentSpeakGen !== myGen || signal.aborted) {
               finish();
               return;
             }
             audio.play().catch(() => finish());
           });
         } else {
-          // Graceful fallback to browser speechSynthesis if server endpoint fails
-          if (this.currentSpeakGen === myGen) {
-            await this.speakBrowserSpeechSynthesis(text, isEnglish ? 'en-US' : 'de-DE');
+          if (this.currentSpeakGen === myGen && !signal.aborted) {
+            const lang = voice.startsWith('de') ? 'de-DE' : 'en-US';
+            await this.speakBrowserSpeechSynthesis(text, lang);
           }
         }
       } else {
-        // Node environment: call msedge-tts directly
         const { MsEdgeTTS, OUTPUT_FORMAT } = await import(/* @vite-ignore */ 'msedge-tts');
         const tts = new MsEdgeTTS();
         await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
@@ -1391,8 +1439,38 @@ detected_mistakes may be an empty array. These are logged silently — never sur
         });
       }
     } catch (err: any) {
-      console.warn('[RealVoiceAdapter] Edge TTS playback warning:', err.message);
+      console.warn('[RealVoiceAdapter] Edge TTS playback warning:', err?.message);
     }
+  }
+
+  /**
+   * speak(sessionHandle, text):
+   * Send text to Edge TTS (voice: de-DE-KatjaNeural or en-US-JennyNeural for English feedback),
+   * play resulting audio, push turn to session transcript and conversation history.
+   */
+  async speak(sessionHandle: VoiceSessionHandle, text: string): Promise<void> {
+    const session = this.sessions.get(sessionHandle.id);
+    if (!session) {
+      throw new Error(`Session ${sessionHandle.id} does not exist`);
+    }
+
+    const myGen = ++this.currentSpeakGen;
+    if (this.currentTtsAbortController) {
+      try { this.currentTtsAbortController.abort(); } catch {}
+    }
+    const abortController = new AbortController();
+    this.currentTtsAbortController = abortController;
+
+    this.updateState(session, 'speaking');
+
+    // Determine appropriate voice: English neural voice for English feedback (Learn mode),
+    // de-DE-KatjaNeural for all German speech.
+    const isEnglish = /^[A-Za-z0-9\s.,!?'"()-]+$/.test(text) && !/[äöüßÄÖÜ]/.test(text) && (text.includes('the ') || text.includes('you ') || text.includes('Great ') || text.includes('Good ') || text.includes('Remember '));
+    const voice = isEnglish ? 'en-US-JennyNeural' : 'de-DE-KatjaNeural';
+
+    await this.playTtsClip(text, voice, abortController.signal, myGen);
+
+    if (this.currentSpeakGen !== myGen) return;
 
     // Push agent turn to session turns and conversation history
     const turn: TranscriptTurn = {
@@ -1411,6 +1489,79 @@ detected_mistakes may be an empty array. These are logged silently — never sur
     if (!session.hasClosed && session.strikes < 3) {
       this.startSilenceTimer(session);
     }
+  }
+
+  /**
+   * speakSegments(sessionHandle, segments):
+   * Plays sequential segments with appropriate native voices:
+   * 'en' -> en-US-JennyNeural, 'de' -> de-DE-KatjaNeural.
+   * Records a single coherent transcript turn with combined text.
+   */
+  async speakSegments(sessionHandle: VoiceSessionHandle, segments: SpeechSegment[]): Promise<void> {
+    const session = this.sessions.get(sessionHandle.id);
+    if (!session || segments.length === 0) return;
+
+    const myGen = ++this.currentSpeakGen;
+    if (this.currentTtsAbortController) {
+      try { this.currentTtsAbortController.abort(); } catch {}
+    }
+    const abortController = new AbortController();
+    this.currentTtsAbortController = abortController;
+
+    this.updateState(session, 'speaking');
+
+    for (const seg of segments) {
+      if (this.currentSpeakGen !== myGen || abortController.signal.aborted) break;
+      const voice = seg.lang === 'de' ? 'de-DE-KatjaNeural' : 'en-US-JennyNeural';
+      await this.playTtsClip(seg.text, voice, abortController.signal, myGen);
+    }
+
+    if (this.currentSpeakGen !== myGen) return;
+
+    const combinedText = segments.map((s) => s.text).join('\n\n');
+    const turn: TranscriptTurn = {
+      speaker: 'agent',
+      text: combinedText,
+      timestamp: new Date().toISOString(),
+      llm_provider: session.lastLlmProvider || 'groq',
+    };
+
+    session.turns.push(turn);
+    session.conversationHistory.push({ role: 'assistant', content: combinedText });
+    this.updateState(session, 'idle');
+    this.notifyTranscript(session, turn);
+
+    if (!session.hasClosed && session.strikes < 3) {
+      this.startSilenceTimer(session);
+    }
+  }
+
+  /**
+   * speakPracticeReview(sessionHandle):
+   * Delivers a concise 3-pointer verbal review in English at the end of Practice Mode.
+   */
+  async speakPracticeReview(sessionHandle: VoiceSessionHandle): Promise<void> {
+    const session = this.sessions.get(sessionHandle.id);
+    if (!session) return;
+
+    const mistakes = session.mistakes || [];
+    let reviewPointers: string;
+
+    if (mistakes.length === 0) {
+      reviewPointers = "Session complete! Here is your quick performance review: First, you maintained a fluent conversational pace throughout. Second, your German phrasing and vocabulary were accurate and confident. Third, great job completing the scenario autonomously. Take a look at your diagnostic summary on screen.";
+    } else {
+      const topCategory = mistakes[0]?.category || 'grammar';
+      const exampleCorrection = mistakes[0]?.correction_de || mistakes[0]?.correction || '';
+      const exampleNote = exampleCorrection ? ` such as practicing "${exampleCorrection}"` : '';
+
+      reviewPointers = `Session complete! Here is your quick performance review: First, you actively engaged and maintained the conversational flow. Second, pay attention to ${topCategory}${exampleNote}. Third, review the highlighted notes in your report to lock in these structures. Let's look at your full diagnostic recap now.`;
+    }
+
+    const segments: SpeechSegment[] = [
+      { text: reviewPointers, lang: 'en' },
+    ];
+
+    await this.speakSegments(sessionHandle, segments);
   }
 
   private speakBrowserSpeechSynthesis(text: string, lang: string): Promise<void> {

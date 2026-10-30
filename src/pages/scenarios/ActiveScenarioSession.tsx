@@ -64,6 +64,7 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
   const [turns, setTurns] = useState<TranscriptTurn[]>(initialTranscript);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState<boolean>(false);
+  const [isRepeatedMistakePause, setIsRepeatedMistakePause] = useState<boolean>(false);
 
   // Timer State
   const [secondsElapsed, setSecondsElapsed] = useState<number>(0);
@@ -201,11 +202,14 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
 
         // 4. Register session ended listener
         if (voiceAdapter.onSessionEnded) {
-          cleanupSessionEnded = voiceAdapter.onSessionEnded(handle, () => {
+          cleanupSessionEnded = voiceAdapter.onSessionEnded(handle, (reason) => {
             if (active) {
+              if (reason === 'repeated_mistake_threshold') {
+                setIsRepeatedMistakePause(true);
+              }
               setTimeout(() => {
                 if (active) handleFinishRef.current();
-              }, 2500);
+              }, reason === 'repeated_mistake_threshold' ? 1200 : 2500);
             }
           });
         }
@@ -243,15 +247,50 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
         // 6. Proactive AI Guidance: In all scenarios, the AI speaks first and guides the user
         if (!hasSpokenOpenerRef.current && (!initialTranscript || initialTranscript.length === 0)) {
           hasSpokenOpenerRef.current = true;
-          const openerText = mode === 'learn'
-            ? (firstPhrase
-                ? `Welcome to ${scenario.title}. Let's practice our first scenario phrase: "${firstPhrase}". Please repeat after me: "${firstPhrase}"`
-                : `Welcome to ${scenario.title}. Let's begin our dialogue simulation.`)
-            : `Hallo! Willkommen zu unserer Praxis-Situation: "${scenario.title}". Wie kann ich Ihnen heute helfen?`;
-
           setTimeout(() => {
-            if (active) {
-              voiceAdapter.speak(handle, openerText).catch((e) => console.warn('Opener speak notice:', e));
+            if (!active) return;
+            if (mode === 'learn') {
+              const germanPrompt = firstPhrase || 'Hallo! Schön Sie kennenzulernen. Wie kann ich Ihnen heute helfen?';
+              const segments = [
+                {
+                  text: `Welcome to ${scenario.title}. In this scenario, you are in a real conversation setting. Listen to what your conversation partner says:`,
+                  lang: 'en' as const,
+                },
+                {
+                  text: germanPrompt,
+                  lang: 'de' as const,
+                },
+                {
+                  text: `How would you answer this? Please respond in German.`,
+                  lang: 'en' as const,
+                },
+              ];
+              if (voiceAdapter.speakSegments) {
+                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
+              } else {
+                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
+              }
+            } else {
+              const germanOpener = firstPhrase || `Hallo! Willkommen zu unserer Praxis-Situation: "${scenario.title}". Wie kann ich Ihnen heute helfen?`;
+              const segments = [
+                {
+                  text: `Starting your practice simulation for ${scenario.title}. From this point on, we will speak completely in German. Do your best to reply naturally.`,
+                  lang: 'en' as const,
+                },
+                {
+                  text: germanOpener,
+                  lang: 'de' as const,
+                },
+                {
+                  text: `Bitte antworten Sie auf Deutsch.`,
+                  lang: 'de' as const,
+                },
+              ];
+              if (voiceAdapter.speakSegments) {
+                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
+              } else {
+                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
+              }
             }
           }, 350);
         }
@@ -319,6 +358,14 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
     try {
       setIsFinishing(true);
       setErrorMsg(null);
+
+      if (mode === 'practice' && sessionHandle && voiceAdapter.speakPracticeReview) {
+        try {
+          await voiceAdapter.speakPracticeReview(sessionHandle);
+        } catch (e) {
+          console.warn('Practice review audio skipped:', e);
+        }
+      }
 
       if (sessionHandle) {
         await voiceAdapter.endSession(sessionHandle);
@@ -606,9 +653,10 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
           subtitle={`${scenario.title} • ${mode === 'learn' ? 'Learn Session' : 'Practice Simulation'}`}
           mode={mode}
           recap={completedSummary}
-          actionButtonText="Continue to Scenarios"
+          actionButtonText={isRepeatedMistakePause ? "Review Completed • Exit" : "Continue to Scenarios"}
           onActionButtonClick={onCompleted}
           sessionId={dbSessionId}
+          isRepeatedMistakePause={isRepeatedMistakePause}
         />
       )}
     </div>
