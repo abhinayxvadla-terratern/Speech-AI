@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { FeedbackCategory, FeedbackStatus, UserFeedback } from '../lib/database.types';
+import { FeedbackStatus, UserFeedback } from '../lib/database.types';
 
 export interface AdminOverviewStats {
   new_signups_today: number;
@@ -31,8 +31,8 @@ export interface AdminFeedbackOverviewItem {
   user_name?: string;
   user_email?: string;
   rating?: number | null;
-  category: FeedbackCategory;
-  message: string;
+  category: string;
+  message?: string;
   session_id?: string | null;
   status: FeedbackStatus;
   created_at: string;
@@ -279,6 +279,7 @@ export async function fetchAdminFeedbackOverview(): Promise<AdminFeedbackOvervie
     const prof = profileMap.get(r.user_id);
     return {
       ...r,
+      message: r.message || '',
       user_name: prof?.name || 'User ' + r.user_id.slice(0, 8),
     };
   });

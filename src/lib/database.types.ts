@@ -286,15 +286,15 @@ export interface LlmProviderLog {
   created_at: string;
 }
 
-export type FeedbackCategory = 'Bug' | 'Feature request' | 'Content issue' | 'Other';
+export type FeedbackCategory = 'Bug' | 'Feature request' | 'Content issue' | 'Other' | 'General' | string;
 export type FeedbackStatus = 'new' | 'reviewed' | 'resolved';
 
 export interface UserFeedback {
   id: string;
   user_id: string;
   rating?: number | null;
-  category: FeedbackCategory;
-  message: string;
+  category: string;
+  message?: string;
   session_id?: string | null;
   status: FeedbackStatus;
   created_at: string;

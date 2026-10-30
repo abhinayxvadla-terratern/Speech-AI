@@ -1,5 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, AlertCircle, Loader2, MessageSquarePlus, Bug, Sparkles, HelpCircle, FileText, Star } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  MessageSquarePlus,
+  Bug,
+  Sparkles,
+  HelpCircle,
+  FileText,
+  Star,
+  ChevronDown,
+  Check,
+} from 'lucide-react';
 import { FeedbackCategory } from '../../lib/database.types';
 import { submitUserFeedback } from '../../services/feedbackService';
 
@@ -19,7 +32,7 @@ const RATING_LABELS: Record<number, { title: string; desc: string; textClass: st
 };
 
 const CATEGORIES: Array<{
-  value: FeedbackCategory;
+  value: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
@@ -53,23 +66,42 @@ const CATEGORIES: Array<{
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   isOpen,
   onClose,
-  defaultCategory = 'Bug',
+  defaultCategory,
   sessionId = null,
 }) => {
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
-  const [category, setCategory] = useState<FeedbackCategory>(defaultCategory);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [message, setMessage] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Sync category when defaultCategory changes on open
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownOpen]);
+
+  // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setRating(5);
       setHoverRating(null);
-      setCategory(defaultCategory);
+      setSelectedCategories(defaultCategory ? [defaultCategory] : []);
+      setDropdownOpen(false);
       setMessage('');
       setSubmitting(false);
       setSubmitted(false);
@@ -82,10 +114,16 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const activeDisplayRating = hoverRating !== null ? hoverRating : rating;
   const ratingMeta = RATING_LABELS[activeDisplayRating] || RATING_LABELS[5];
 
+  const toggleCategory = (catValue: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(catValue) ? prev.filter((c) => c !== catValue) : [...prev, catValue]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) {
-      setErrorMsg('Please enter your feedback message.');
+    if (!rating || rating < 1) {
+      setErrorMsg('Please select a star rating.');
       return;
     }
 
@@ -95,7 +133,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     try {
       await submitUserFeedback({
         rating,
-        category,
+        categories: selectedCategories,
+        category: selectedCategories.length > 0 ? selectedCategories.join(', ') : 'General',
         message: message.trim(),
         session_id: sessionId,
       });
@@ -110,6 +149,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   const handleClose = () => {
     setMessage('');
+    setSelectedCategories([]);
+    setDropdownOpen(false);
     setSubmitted(false);
     setErrorMsg(null);
     onClose();
@@ -206,7 +247,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               </div>
             )}
 
-            {/* 1. App / Session Star Rating Widget */}
+            {/* 1. App / Session Star Rating Widget (Always Active & Primary) */}
             <div className="p-4 rounded-2xl bg-gradient-to-b from-[#FAFBFF] to-white border border-blue-100/80 text-center space-y-2">
               <label className="text-xs font-bold text-[#00215C] block">
                 {sessionId ? 'How would you rate this simulation session?' : 'How would you rate your overall experience with SpeechAI?'}
@@ -223,7 +264,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                       onMouseEnter={() => setHoverRating(starVal)}
                       onMouseLeave={() => setHoverRating(null)}
                       onClick={() => setRating(starVal)}
-                      className="p-1 rounded-lg transition-transform hover:scale-125 focus:outline-none"
+                      className="p-1 rounded-lg transition-transform hover:scale-125 focus:outline-none cursor-pointer"
                       aria-label={`Rate ${starVal} out of 5 stars`}
                     >
                       <Star
@@ -249,56 +290,126 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               </div>
             </div>
 
-            {/* 2. Category Selector */}
-            <div className="space-y-1.5">
-              <label className="font-bold text-[#00215C] block">Feedback Category</label>
-              <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((cat) => {
-                  const Icon = cat.icon;
-                  const isSelected = category === cat.value;
-                  return (
-                    <button
-                      key={cat.value}
-                      type="button"
-                      onClick={() => setCategory(cat.value)}
-                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
-                        isSelected
-                          ? 'border-[#255CC1] bg-[#EBF2FF] text-[#00215C] shadow-2xs'
-                          : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-[#255CC1]' : 'text-slate-400'}`} />
-                        <span className="text-xs">{cat.label}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 line-clamp-1">
-                        {cat.description}
-                      </span>
-                    </button>
-                  );
-                })}
+            {/* 2. Category Dropdown with Multiselect (Optional) */}
+            <div className="space-y-1.5 relative" ref={dropdownRef}>
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-[#00215C] block">
+                  Feedback Category <span className="text-[10px] font-normal text-slate-400">(Optional • Multi-select)</span>
+                </label>
+                {selectedCategories.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategories([])}
+                    className="text-[10px] text-slate-400 hover:text-rose-600 transition-colors font-medium cursor-pointer"
+                  >
+                    Clear selection
+                  </button>
+                )}
               </div>
+
+              {/* Dropdown Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setDropdownOpen((prev) => !prev)}
+                className={`w-full min-h-[42px] p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 bg-white cursor-pointer ${
+                  dropdownOpen
+                    ? 'border-[#255CC1] ring-2 ring-[#255CC1]/20 shadow-xs'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+                  {selectedCategories.length === 0 ? (
+                    <span className="text-slate-400 text-xs">Select categories (optional)...</span>
+                  ) : (
+                    selectedCategories.map((catVal) => {
+                      const matched = CATEGORIES.find((c) => c.value === catVal);
+                      const Icon = matched?.icon || HelpCircle;
+                      return (
+                        <span
+                          key={catVal}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EBF2FF] text-[#255CC1] font-semibold text-[11px] border border-blue-200/80"
+                        >
+                          <Icon className="w-3 h-3 text-[#255CC1]" />
+                          <span>{catVal}</span>
+                        </span>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0 text-slate-400">
+                  {selectedCategories.length > 0 && (
+                    <span className="text-[10px] font-bold bg-slate-100 px-1.5 py-0.5 rounded-full text-slate-600">
+                      {selectedCategories.length}
+                    </span>
+                  )}
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen ? 'rotate-180 text-[#255CC1]' : ''}`} />
+                </div>
+              </button>
+
+              {/* Dropdown Popover Menu */}
+              {dropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 z-30 bg-white rounded-2xl border border-slate-200 shadow-xl p-1.5 space-y-1 animate-fadeIn">
+                  {CATEGORIES.map((cat) => {
+                    const Icon = cat.icon;
+                    const isChecked = selectedCategories.includes(cat.value);
+                    return (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        onClick={() => toggleCategory(cat.value)}
+                        className={`w-full p-2.5 rounded-xl text-left transition-all flex items-center justify-between gap-2.5 cursor-pointer ${
+                          isChecked
+                            ? 'bg-[#EBF2FF]/80 text-[#00215C]'
+                            : 'hover:bg-slate-50 text-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            isChecked ? 'bg-[#255CC1] text-white' : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            <Icon className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="font-bold text-xs block leading-tight">{cat.label}</span>
+                            <span className="text-[10px] text-slate-500 truncate block leading-tight mt-0.5">
+                              {cat.description}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                          isChecked
+                            ? 'bg-[#255CC1] border-[#255CC1] text-white'
+                            : 'border-slate-300 bg-white'
+                        }`}>
+                          {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* 3. Free Text Message */}
+            {/* 3. Free Text Review / Comment (Optional) */}
             <div className="space-y-1.5">
               <label htmlFor="feedback-message" className="font-bold text-[#00215C] block">
                 {rating <= 3 ? 'What went wrong or could be improved?' : 'What did you like or suggest for future updates?'}
+                <span className="text-[10px] font-normal text-slate-400 ml-1.5">(Optional)</span>
               </label>
               <textarea
                 id="feedback-message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={3}
-                required
                 placeholder={
                   rating <= 3
-                    ? "Tell us what didn't work well or what correction felt wrong..."
-                    : category === 'Content issue'
-                    ? "What was inaccurate about the correction, transcription, or tutor response?"
-                    : category === 'Bug'
-                    ? "What went wrong? Steps to reproduce the issue..."
-                    : "Share your thoughts or ideas to make SpeechAI even better..."
+                    ? "Tell us what didn't work well or what felt off (optional)..."
+                    : selectedCategories.includes('Content issue')
+                    ? "What was inaccurate about the correction, transcription, or tutor response (optional)?"
+                    : selectedCategories.includes('Bug')
+                    ? "What went wrong? Steps to reproduce the issue (optional)..."
+                    : "Share your thoughts or ideas to make SpeechAI even better (optional)..."
                 }
                 className="w-full p-3 rounded-xl border border-slate-200 focus:border-[#255CC1] focus:ring-1 focus:ring-[#255CC1] outline-none text-xs text-slate-800 placeholder-slate-400 resize-none transition-all leading-relaxed"
               />
@@ -309,14 +420,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold transition-colors"
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={submitting || !message.trim()}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white font-semibold transition-all disabled:opacity-50 shadow-xs"
+                disabled={submitting || rating < 1}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white font-semibold transition-all disabled:opacity-50 shadow-xs cursor-pointer"
               >
                 {submitting ? (
                   <>
