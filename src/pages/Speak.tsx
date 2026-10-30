@@ -13,13 +13,17 @@ import {
   Compass, 
   Briefcase, 
   Loader2, 
-  BookOpen
+  BookOpen,
+  ArrowLeft,
+  Play,
+  Sparkles,
+  Clock
 } from 'lucide-react';
 
 import { useKillSwitch } from '../hooks/useKillSwitch';
 import { TabUnavailableBanner } from '../components/layout/TabUnavailableBanner';
 
-type SpeakView = 'list' | 'session';
+type SpeakView = 'list' | 'preview' | 'session';
 
 export const Speak: React.FC = () => {
   const { user, profile } = useAuth();
@@ -120,12 +124,12 @@ export const Speak: React.FC = () => {
     }
   };
 
-  // Open Module directly into Learn Mode Speaking session
+  // Open Module into Preview Screen
   const handleSelectModule = (mod: Module, isAccessible: boolean) => {
     if (!isAccessible) return;
     setSelectedModule(mod);
     checkIncompleteSession(mod);
-    setView('session');
+    setView('preview');
   };
 
   // Module Status Calculator
@@ -188,6 +192,122 @@ export const Speak: React.FC = () => {
               </div>
               <ArrowRight className="w-4 h-4 text-[#255CC1] group-hover:translate-x-1 transition-transform" />
             </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // MODULE PREVIEW VIEW (WORKOUT OVERVIEW BEFORE START)
+  // ==========================================
+  if (view === 'preview' && selectedModule) {
+    const contentObj = (selectedModule.content as any) || {};
+    const userDomain = profile?.primary_domain;
+    const domainVariant = userDomain && contentObj.domain_variants?.[userDomain] ? contentObj.domain_variants[userDomain] : null;
+    const effectiveContent = domainVariant || contentObj;
+    const previewPhrases: Array<{ german: string; english: string }> =
+      effectiveContent.target_phrases && effectiveContent.target_phrases.length > 0
+        ? effectiveContent.target_phrases
+        : effectiveContent.target_phrase
+          ? [{ german: effectiveContent.target_phrase, english: effectiveContent.english_meaning || '' }]
+          : [];
+    const examples: string[] = effectiveContent.example_sentences || [];
+
+    return (
+      <div className="max-w-2xl mx-auto space-y-5 animate-fadeIn text-[#111111] pb-10">
+        {/* Back Button */}
+        <button
+          onClick={() => {
+            setView('list');
+            setSelectedModule(null);
+          }}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-[#00215C] transition-colors p-1 rounded-lg hover:bg-slate-100"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Curriculum</span>
+        </button>
+
+        {/* Main Workout Preview Card */}
+        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
+                Level {cefrLevel}
+              </span>
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60">
+                Module {selectedModule.module_number}
+              </span>
+              <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 ml-auto">
+                <Clock className="w-3.5 h-3.5 text-[#255CC1]" />
+                ~3 minutes
+              </span>
+            </div>
+
+            <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
+              {selectedModule.title}
+            </h1>
+            <p className="text-sm text-slate-600 leading-relaxed font-normal">
+              {selectedModule.micro_skill}
+            </p>
+          </div>
+
+          {/* Phrases to Master */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold text-[#00215C] uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
+                Phrases in this Workout ({previewPhrases.length})
+              </h2>
+              <span className="text-[11px] text-slate-400 font-medium">Spoken 1-by-1</span>
+            </div>
+
+            <div className="space-y-2.5">
+              {previewPhrases.map((p, idx) => (
+                <div
+                  key={idx}
+                  className="p-3.5 sm:p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 flex items-start gap-3 hover:bg-blue-50/40 transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-[#EBF2FF] text-[#255CC1] font-bold text-xs flex items-center justify-center shrink-0 border border-blue-100">
+                    {idx + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm sm:text-base text-[#00215C]">
+                      {p.german}
+                    </p>
+                    <p className="text-xs text-slate-600 font-medium mt-0.5">
+                      {p.english}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Example Context sentences if available */}
+          {examples.length > 0 && (
+            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100/80 space-y-1.5 text-xs">
+              <span className="text-[10px] font-bold text-[#255CC1] uppercase tracking-wider">Example Usage</span>
+              <ul className="space-y-1 text-slate-700">
+                {examples.map((ex, i) => (
+                  <li key={i} className="italic">&ldquo;{ex}&rdquo;</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Primary Action Button */}
+          <div className="pt-2">
+            <button
+              onClick={() => setView('session')}
+              className="w-full py-3.5 sm:py-4 px-6 rounded-xl bg-[#00215C] hover:bg-[#001A49] text-white font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-white group-hover:translate-x-0.5 transition-transform" />
+              <span>Start Workout</span>
+            </button>
+            <p className="text-[11px] text-slate-400 text-center mt-2.5">
+              Microphone will activate when the workout begins.
+            </p>
           </div>
         </div>
       </div>

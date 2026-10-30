@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Module } from '../../lib/database.types';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -133,11 +133,22 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
   const domainVariant = userDomain && contentObj.domain_variants?.[userDomain] ? contentObj.domain_variants[userDomain] : null;
   const effectiveContent = domainVariant || contentObj;
 
-  const targetPhrases: Array<{ german: string; english: string }> = 
-    effectiveContent.target_phrases || 
-    (effectiveContent.target_phrase ? [{ german: effectiveContent.target_phrase, english: effectiveContent.english_meaning || '' }] : []);
+  const targetPhrases: Array<{ german: string; english: string }> = useMemo(() => {
+    if (Array.isArray(effectiveContent.target_phrases) && effectiveContent.target_phrases.length > 0) {
+      return effectiveContent.target_phrases;
+    }
+    if (effectiveContent.target_phrase) {
+      return [{ german: effectiveContent.target_phrase, english: effectiveContent.english_meaning || '' }];
+    }
+    return [{ german: 'Guten Tag!', english: 'Good day! / Hello!' }];
+  }, [effectiveContent]);
 
-  const primaryTargetPhrase = targetPhrases[0]?.german || effectiveContent.target_phrase || '';
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState<number>(0);
+  const currentPhraseIndexRef = useRef<number>(0);
+  currentPhraseIndexRef.current = currentPhraseIndex;
+
+  const currentPhrase = targetPhrases[currentPhraseIndex] || targetPhrases[0];
+  const primaryTargetPhrase = currentPhrase.german;
 
   // Scroll to bottom when turns update
   useEffect(() => {
@@ -220,8 +231,15 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
         }
 
         // 5. Register transcript listener
+        let lastTurnWasUser = false;
+
         cleanupTranscript = voiceAdapter.onTranscript(handle, async (newTurn) => {
           if (!active) return;
+
+          if (newTurn.speaker === 'user') {
+            lastTurnWasUser = true;
+          }
+
           setTurns((prev) => {
             const existingIdx = prev.findIndex(
               (t) => t === newTurn || (t.timestamp === newTurn.timestamp && t.speaker === newTurn.speaker)
@@ -246,6 +264,33 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
             setTimeout(() => {
               if (active) handleFinishRef.current();
             }, 2500);
+            return;
+          }
+
+          // Advance to next phrase after coach finishes speaking feedback to a user turn
+          if (mode === 'learn' && newTurn.speaker === 'agent' && lastTurnWasUser) {
+            lastTurnWasUser = false;
+            const curIdx = currentPhraseIndexRef.current;
+            if (curIdx < targetPhrases.length - 1) {
+              const nextIdx = curIdx + 1;
+              currentPhraseIndexRef.current = nextIdx;
+              setCurrentPhraseIndex(nextIdx);
+              const nextPhrase = targetPhrases[nextIdx];
+              if (handle && handle.context) {
+                handle.context.targetPhrase = nextPhrase.german;
+              }
+              const nextPrompt = `The next phrase is: "${nextPhrase.german}" — which means "${nextPhrase.english}". Now, say it!`;
+              setTimeout(() => {
+                if (active) {
+                  voiceAdapter.speak(handle, nextPrompt).catch(console.warn);
+                }
+              }, 1200);
+            } else {
+              // All phrases in this workout completed! Wrap up and finish session
+              setTimeout(() => {
+                if (active) handleFinishRef.current();
+              }, 2000);
+            }
           }
         });
 
@@ -254,43 +299,14 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
           hasSpokenOpenerRef.current = true;
           setTimeout(() => {
             if (!active) return;
+            const userName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
             if (mode === 'learn') {
-              const englishMeaning = targetPhrases[0]?.english ? ` ("${targetPhrases[0].english}")` : '';
-              const segments = [
-                {
-                  text: `Welcome to ${module.title}. Today, we master: "${primaryTargetPhrase}"${englishMeaning}. Listen closely:`,
-                  lang: 'en' as const,
-                },
-                {
-                  text: primaryTargetPhrase,
-                  lang: 'de' as const,
-                },
-                {
-                  text: `Now, speak with natural cadence. Whenever you're ready, recite the sentence in German.`,
-                  lang: 'en' as const,
-                },
-              ];
-              if (voiceAdapter.speakSegments) {
-                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
-              } else {
-                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
-              }
+              const firstPhrase = targetPhrases[0] || { german: 'Guten Tag!', english: 'Good day! / Hello!' };
+              const opener = `Welcome ${userName}! Today we are practicing ${module.title}. I will tell you a German phrase and explain the meaning in English, then you repeat it. The first phrase is: "${firstPhrase.german}" — which means "${firstPhrase.english}". Now, say it!`;
+              voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             } else {
-              const segments = [
-                {
-                  text: `Starting your practice simulation for ${module.title}. Speak with natural German phrasing:`,
-                  lang: 'en' as const,
-                },
-                {
-                  text: `Hallo! Wir starten Ihre Praxis-Situation für "${module.title}". Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`,
-                  lang: 'de' as const,
-                },
-              ];
-              if (voiceAdapter.speakSegments) {
-                voiceAdapter.speakSegments(handle, segments).catch((e) => console.warn('Opener speak notice:', e));
-              } else {
-                voiceAdapter.speak(handle, segments.map((s) => s.text).join('\n\n')).catch((e) => console.warn('Opener speak notice:', e));
-              }
+              const opener = `Welcome ${userName}! This is a realistic scenario: "${module.title}". We will have a complete German conversation. Let's begin! Hallo! Wir starten Ihre Praxis-Situation für "${module.title}". Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`;
+              voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             }
           }, 350);
         }
@@ -463,29 +479,61 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
         </button>
       </header>
 
-      {/* Target Phrase Teleprompter Stage (Learn Mode) */}
-      {mode === 'learn' && primaryTargetPhrase && (
-        <div className="mb-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
+      {/* Target Phrase Stepper Stage (Learn Mode) */}
+      {mode === 'learn' && currentPhrase && (
+        <div className="mb-4 p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-3 relative overflow-hidden animate-fadeIn">
+          {/* Stepper bar */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
               <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-              Target German Phrase
+              Phrase {currentPhraseIndex + 1} of {targetPhrases.length}
             </span>
-            {domainVariant && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/60">
-                {userDomain}
-              </span>
-            )}
+            <span className="font-semibold text-slate-500 text-[11px]">
+              {Math.round(((currentPhraseIndex + 1) / targetPhrases.length) * 100)}%
+            </span>
           </div>
-          <p className="font-heading font-extrabold text-lg sm:text-xl text-[#00215C] leading-snug tracking-tight">
-            &ldquo;{primaryTargetPhrase}&rdquo;
-          </p>
-          {targetPhrases[0]?.english && (
-            <p className="text-xs text-slate-600 font-medium italic border-t border-slate-100 pt-2 flex items-center gap-1.5">
-              <span className="text-slate-400 not-italic font-bold text-[10px] uppercase">Meaning:</span>
-              <span>{targetPhrases[0].english}</span>
+
+          <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-full bg-[#255CC1] rounded-full transition-all duration-300"
+              style={{ width: `${((currentPhraseIndex + 1) / targetPhrases.length) * 100}%` }}
+            />
+          </div>
+
+          {/* Large German Phrase */}
+          <div className="py-2 text-center sm:text-left">
+            <p className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] leading-tight tracking-tight">
+              &ldquo;{currentPhrase.german}&rdquo;
             </p>
-          )}
+            <p className="text-sm sm:text-base text-slate-600 font-medium italic mt-1.5">
+              &ldquo;{currentPhrase.english}&rdquo;
+            </p>
+          </div>
+
+          {/* Latest Feedback for Current Phrase if user has spoken */}
+          {(() => {
+            const latestUser = turns.slice().reverse().find((t) => t.speaker === 'user');
+            if (!latestUser || !latestUser.feedback_en) return null;
+            return (
+              <div className={`p-3 rounded-xl text-xs flex items-start gap-2 border animate-fadeIn ${
+                latestUser.isCorrect
+                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                  : 'bg-amber-50/80 border-amber-200 text-amber-900'
+              }`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${
+                  latestUser.isCorrect ? 'text-emerald-600' : 'text-amber-600'
+                }`} />
+                <div className="min-w-0">
+                  <p className="font-semibold">
+                    {latestUser.isCorrect ? 'Accurate German Recitation' : 'Feedback & Correction'}
+                  </p>
+                  <p className="text-[11px] mt-0.5 text-slate-700">
+                    {latestUser.feedback_en}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -639,7 +687,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
           subtitle={`${mode === 'learn' ? 'Learn Session' : 'Practice Simulation'} • Module ${module.module_number}: ${module.title}`}
           mode={mode}
           recap={completedSummary}
-          actionButtonText={isRepeatedMistakePause ? "Review Completed • Exit" : "Continue to Modules"}
+          actionButtonText={isRepeatedMistakePause ? "Review Completed • Exit" : "Continue to Next Module →"}
           onActionButtonClick={onCompleted}
           sessionId={dbSessionId}
           isRepeatedMistakePause={isRepeatedMistakePause}

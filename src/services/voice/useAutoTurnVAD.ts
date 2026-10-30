@@ -225,7 +225,7 @@ export function useAutoTurnVAD({
     initSpeechRecognition();
 
     const vad = new VadManager({
-      redemptionMs: 1300,
+      redemptionMs: 2000,
       positiveSpeechThreshold: 0.5,
       negativeSpeechThreshold: 0.35,
       preSpeechPadMs: 400,

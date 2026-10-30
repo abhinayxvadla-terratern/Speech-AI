@@ -7,7 +7,7 @@
 import { MicVAD, utils } from '@ricky0123/vad-web';
 
 export interface VadManagerConfig {
-  /** Conservative pause / silence threshold in ms before triggering speech end (default: 1300ms) */
+  /** Conservative pause / silence threshold in ms before triggering speech end (default: 2000ms) */
   redemptionMs?: number;
   /** Speech probability threshold for onset (0-1, default: 0.5) */
   positiveSpeechThreshold?: number;
@@ -40,7 +40,7 @@ export class VadManager {
 
   constructor(config: VadManagerConfig = {}) {
     this.config = {
-      redemptionMs: 1300,
+      redemptionMs: 2000,
       positiveSpeechThreshold: 0.5,
       negativeSpeechThreshold: 0.35,
       preSpeechPadMs: 400,

@@ -179,8 +179,6 @@ export class RealVoiceAdapter implements VoiceAdapter {
     };
 
     this.sessions.set(sessionId, sessionState);
-    // Start initial 15-second silence timer for user's opening turn
-    this.startSilenceTimer(sessionState);
     return handle;
   }
 
@@ -328,7 +326,7 @@ export class RealVoiceAdapter implements VoiceAdapter {
    * Supports WAV, WebM, OGG, MP3 and falls back smoothly to client speech recognition if needed.
    */
   private async transcribeAudio(
-    session: InternalSessionState,
+    _session: InternalSessionState,
     audioChunk?: any,
     clientTranscript?: string
   ): Promise<{ transcript: string; confidence: 'high' | 'medium' | 'low' }> {
@@ -353,43 +351,7 @@ export class RealVoiceAdapter implements VoiceAdapter {
     } else if (clientTranscript && clientTranscript.trim().length > 0) {
       return { transcript: clientTranscript.trim(), confidence: 'high' };
     } else {
-      // If no raw audio chunk was provided and no client transcript, check if fallback phrase needed
-      const fallbackText =
-        session.context.targetPhrase ||
-        session.context.title ||
-        'Ich möchte bitte zahlen.';
-
-      try {
-        if (typeof window !== 'undefined') {
-          const ttsRes = await fetch(`/api/tts?text=${encodeURIComponent(fallbackText)}&voice=de-DE-KatjaNeural`);
-          if (ttsRes.ok) {
-            const blob = await ttsRes.blob();
-            fileToSend = new File([blob], 'recording.mp3', { type: 'audio/mpeg' });
-          }
-        } else {
-          const { MsEdgeTTS, OUTPUT_FORMAT } = await import(/* @vite-ignore */ 'msedge-tts');
-          const tts = new MsEdgeTTS();
-          await tts.setMetadata('de-DE-KatjaNeural', OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-          const { audioStream } = tts.toStream(fallbackText);
-          const chunks: any[] = [];
-          await new Promise<void>((resolve, reject) => {
-            audioStream.on('data', (c: any) => chunks.push(c));
-            audioStream.on('end', () => {
-              tts.close();
-              resolve();
-            });
-            audioStream.on('error', (e: any) => {
-              tts.close();
-              reject(e);
-            });
-          });
-          const fullBuf = Buffer.concat(chunks);
-          fileToSend = new File([fullBuf as any], 'recording.mp3', { type: 'audio/mpeg' });
-        }
-      } catch (err) {
-        console.warn('[RealVoiceAdapter] Could not synthesize fallback audio, using simulated text fallback:', err);
-        return { transcript: fallbackText, confidence: 'high' };
-      }
+      throw new Error('No audio detected. Please speak into your microphone or tap Speak.');
     }
 
     if (!fileToSend) {
