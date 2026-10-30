@@ -519,12 +519,12 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
       {/* Transcript Conversation Area with Guaranteed Bottom Clearance */}
       <div className="flex-1 space-y-3.5 py-2 overflow-y-auto px-1 pb-36">
         {turns.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 bg-white/80 rounded-2xl border border-slate-200/70 p-6 shadow-xs">
-            <div className="w-12 h-12 rounded-2xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center mx-auto mb-3 shadow-xs">
-              <Compass className="w-6 h-6 animate-pulse" />
+          <div className="py-6 sm:py-10 text-center text-slate-400 bg-white/80 rounded-2xl border border-slate-200/70 p-4 sm:p-6 shadow-xs">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center mx-auto mb-2.5 shadow-xs">
+              <Compass className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
             </div>
             <p className="text-sm font-heading font-extrabold text-[#00215C]">Your Simulation Stage is Active</p>
-            <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto font-medium leading-relaxed">
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto font-medium leading-relaxed">
               Listen to the opening prompt from your roleplay partner, then respond in German.
             </p>
           </div>

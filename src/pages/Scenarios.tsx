@@ -21,7 +21,7 @@ import {
 import { useKillSwitch } from '../hooks/useKillSwitch';
 import { TabUnavailableBanner } from '../components/layout/TabUnavailableBanner';
 
-type ScenariosTrackTab = 'domain' | 'daily_life';
+type ScenariosTrackTab = 'all' | 'domain' | 'daily_life';
 type ScenariosView = 'list' | 'detail' | 'session';
 
 const CEFR_ORDER: Record<CefrLevel, number> = {
@@ -47,7 +47,7 @@ export const Scenarios: React.FC = () => {
   const addedDomains = profile?.added_domains || [];
 
   // Tab & View State
-  const [activeTab, setActiveTab] = useState<ScenariosTrackTab>('domain');
+  const [activeTab, setActiveTab] = useState<ScenariosTrackTab>('all');
   const [view, setView] = useState<ScenariosView>('list');
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<number | 'open'>(5);
@@ -56,6 +56,7 @@ export const Scenarios: React.FC = () => {
 
   // Scenarios Data
   const [domainScenarios, setDomainScenarios] = useState<Scenario[]>([]);
+  const [allDomainScenarios, setAllDomainScenarios] = useState<Scenario[]>([]);
   const [dailyScenarios, setDailyScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -97,6 +98,8 @@ export const Scenarios: React.FC = () => {
         .order('min_level', { ascending: true });
 
       if (domainErr) throw domainErr;
+      const allDomainList = (allDomainData as Scenario[]) || [];
+      setAllDomainScenarios(allDomainList);
 
       // Filter in memory for primary + added domains
       const allActiveDomains: { domain: string; subbranch: string }[] = [];
@@ -107,7 +110,7 @@ export const Scenarios: React.FC = () => {
         allActiveDomains.push({ domain: ad.domain, subbranch: ad.subbranch });
       });
 
-      const matchedDomainScenarios = (allDomainData as Scenario[] || []).filter((sc) => {
+      const matchedDomainScenarios = allDomainList.filter((sc) => {
         return allActiveDomains.some(
           (ad) => ad.domain === sc.parent_domain && ad.subbranch === sc.sub_branch
         );
@@ -452,11 +455,28 @@ export const Scenarios: React.FC = () => {
   // ==========================================
   // SCENARIOS LIST VIEW (DEFAULT)
   // ==========================================
-  const currentList = activeTab === 'domain' ? domainScenarios : dailyScenarios;
+  const combinedAllScenarios = React.useMemo(() => {
+    const careerPool = domainScenarios.length > 0 ? domainScenarios : allDomainScenarios;
+    const map = new Map<string, Scenario>();
+    careerPool.forEach((sc) => map.set(sc.id, sc));
+    dailyScenarios.forEach((sc) => map.set(sc.id, sc));
+    return Array.from(map.values()).sort(
+      (a, b) => (CEFR_ORDER[a.min_level] || 1) - (CEFR_ORDER[b.min_level] || 1)
+    );
+  }, [domainScenarios, allDomainScenarios, dailyScenarios]);
+
+  const currentList =
+    activeTab === 'all'
+      ? combinedAllScenarios
+      : activeTab === 'domain'
+      ? domainScenarios
+      : dailyScenarios;
+
   const baselineScenarios = dailyScenarios.filter((sc) => sc.is_baseline);
   const regularDailyScenarios = dailyScenarios.filter((sc) => !sc.is_baseline);
 
   const renderScenarioCard = (sc: Scenario, isEssential: boolean = false) => {
+    const isDomain = sc.track === 'domain';
     return (
       <div
         key={sc.id}
@@ -464,13 +484,27 @@ export const Scenarios: React.FC = () => {
         className="p-5 rounded-2xl border border-slate-200/80 hover:border-[#255CC1]/50 bg-white shadow-xs hover:shadow-md transition-all cursor-pointer select-none active:scale-[0.99] flex flex-col justify-between group"
       >
         <div>
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
-              Level {sc.min_level}
-            </span>
+          <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
+                Level {sc.min_level}
+              </span>
+              {isDomain ? (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#00215C] border border-blue-200/60 flex items-center gap-1">
+                  <Briefcase className="w-2.5 h-2.5 text-[#255CC1]" />
+                  <span>{sc.parent_domain || 'Career'}</span>
+                </span>
+              ) : (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60 flex items-center gap-1">
+                  <Coffee className="w-2.5 h-2.5 text-slate-500" />
+                  <span>{sc.is_baseline ? 'Civic Essential' : 'Daily Life'}</span>
+                </span>
+              )}
+            </div>
+
             {isEssential && (
-              <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#255CC1] border border-blue-200 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-[#255CC1]" />
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#255CC1] border border-blue-200 flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5 text-[#255CC1]" />
                 Essential
               </span>
             )}
@@ -486,7 +520,7 @@ export const Scenarios: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-end mt-4 pt-3 border-t border-slate-100 text-slate-400 group-hover:text-[#255CC1] transition-colors text-xs font-semibold gap-1">
-          <span>Open setup</span>
+          <span>Start scenario</span>
           <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
         </div>
       </div>
@@ -494,15 +528,15 @@ export const Scenarios: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto text-[#111111] animate-fadeIn">
+    <div className="space-y-5 sm:space-y-6 max-w-5xl mx-auto text-[#111111] animate-fadeIn pb-6">
       {/* Header & Domain Section */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-4 sm:space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-100">
           <div>
-            <h1 className="font-heading font-semibold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
+            <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
               Roleplay Scenarios
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5 sm:mt-1">
               Authentic workplace dialogues and practical daily simulations
             </p>
           </div>
@@ -517,32 +551,60 @@ export const Scenarios: React.FC = () => {
           </div>
         </div>
 
-        {/* TWO-OPTION TOGGLE SWITCHER */}
-        <div className="flex rounded-full bg-slate-100/80 p-1 border border-slate-200/60 max-w-md mx-auto sm:mx-0">
+        {/* THREE-OPTION TOGGLE SWITCHER (All, Career, Daily Life) */}
+        <div className="grid grid-cols-3 rounded-full bg-slate-100/90 p-1 border border-slate-200/70 max-w-lg mx-auto sm:mx-0 text-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            className={`py-2 px-2 sm:px-3 rounded-full font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'all'
+                ? 'bg-white text-[#00215C] shadow-xs'
+                : 'text-slate-600 hover:text-[#00215C]'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">All</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full hidden sm:inline-block ${
+              activeTab === 'all' ? 'bg-[#EBF2FF] text-[#255CC1]' : 'bg-slate-200/70 text-slate-600'
+            }`}>
+              {combinedAllScenarios.length}
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveTab('domain')}
-            className={`flex-1 py-2 px-3 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            className={`py-2 px-2 sm:px-3 rounded-full font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'domain'
                 ? 'bg-white text-[#00215C] shadow-xs'
                 : 'text-slate-600 hover:text-[#00215C]'
             }`}
           >
-            <Briefcase className="w-4 h-4" />
-            <span>My Career</span>
+            <Briefcase className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">My Career</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full hidden sm:inline-block ${
+              activeTab === 'domain' ? 'bg-[#EBF2FF] text-[#255CC1]' : 'bg-slate-200/70 text-slate-600'
+            }`}>
+              {domainScenarios.length}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('daily_life')}
-            className={`flex-1 py-2 px-3 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            className={`py-2 px-2 sm:px-3 rounded-full font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'daily_life'
                 ? 'bg-white text-[#00215C] shadow-xs'
                 : 'text-slate-600 hover:text-[#00215C]'
             }`}
           >
-            <Coffee className="w-4 h-4" />
-            <span>Daily Life & Civic</span>
+            <Coffee className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Daily Life</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full hidden sm:inline-block ${
+              activeTab === 'daily_life' ? 'bg-[#EBF2FF] text-[#255CC1]' : 'bg-slate-200/70 text-slate-600'
+            }`}>
+              {dailyScenarios.length}
+            </span>
           </button>
         </div>
       </div>
@@ -578,9 +640,13 @@ export const Scenarios: React.FC = () => {
           </p>
         </div>
       ) : (
-        /* Scenarios 2-Column Grid on Desktop, 1-Column on Tablet/Mobile */
-        activeTab === 'domain' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        /* Scenarios View: All, Career, or Daily Life */
+        activeTab === 'all' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5">
+            {combinedAllScenarios.map((sc) => renderScenarioCard(sc, sc.is_baseline))}
+          </div>
+        ) : activeTab === 'domain' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5">
             {domainScenarios.map((sc) => renderScenarioCard(sc, false))}
           </div>
         ) : (
@@ -598,7 +664,7 @@ export const Scenarios: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5">
                   {baselineScenarios.map((sc) => renderScenarioCard(sc, true))}
                 </div>
               </div>
@@ -613,7 +679,7 @@ export const Scenarios: React.FC = () => {
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5">
                   {regularDailyScenarios.map((sc) => renderScenarioCard(sc, false))}
                 </div>
               </div>

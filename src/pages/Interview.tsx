@@ -553,15 +553,15 @@ export const Interview: React.FC = () => {
     : 'General Track';
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto text-[#111111] animate-fadeIn">
+    <div className="space-y-5 sm:space-y-6 max-w-5xl mx-auto text-[#111111] animate-fadeIn pb-6">
       {/* Top Header Card */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-3.5 sm:space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-100">
           <div>
-            <h1 className="font-heading font-semibold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
+            <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
               Job & Visa Interviews
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5 sm:mt-1">
               Specialized German interview preparation for your career track
             </p>
           </div>
@@ -585,7 +585,7 @@ export const Interview: React.FC = () => {
           <p className="text-xs font-medium">Loading domain interview tracks...</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5 sm:space-y-6">
           {/* LEVEL B1 INTERVIEW TYPES (2-COLUMN GRID) */}
           {b1Types.length > 0 && (
             <div className="space-y-3">
@@ -596,16 +596,16 @@ export const Interview: React.FC = () => {
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5">
                 {b1Types.map((t) => (
                   <div
                     key={t.id}
                     onClick={() => handleOpenTypeSetup(t)}
-                    className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-[#255CC1]/50 shadow-xs hover:shadow-md transition-all cursor-pointer select-none active:scale-[0.99] flex flex-col justify-between group"
+                    className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-[#255CC1]/50 shadow-xs hover:shadow-md transition-all cursor-pointer select-none active:scale-[0.99] flex flex-col justify-between group"
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
                           {t.min_level}
                         </span>
                       </div>
@@ -639,12 +639,12 @@ export const Interview: React.FC = () => {
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5">
                 {b2Types.map((t) => (
                   <div
                     key={t.id}
                     onClick={() => handleOpenTypeSetup(t)}
-                    className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-[#255CC1]/50 shadow-xs hover:shadow-md transition-all cursor-pointer select-none active:scale-[0.99] flex flex-col justify-between group"
+                    className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-[#255CC1]/50 shadow-xs hover:shadow-md transition-all cursor-pointer select-none active:scale-[0.99] flex flex-col justify-between group"
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-2">

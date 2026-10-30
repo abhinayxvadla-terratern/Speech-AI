@@ -49,8 +49,8 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="min-h-screen min-h-[100dvh] md:h-screen md:h-[100dvh] md:overflow-hidden bg-[#FAFBFF] text-[#111111] flex flex-col md:flex-row w-full max-w-full">
-      {/* Desktop Sidebar (hidden on mobile, visible md+) */}
-      <aside className="hidden md:flex flex-col md:w-60 lg:w-64 bg-white border-r border-slate-200/90 h-full shrink-0 select-none z-30">
+      {/* Desktop Sidebar (hidden on mobile, visible md+) - Permanently fixed & stationary */}
+      <aside className="hidden md:flex flex-col md:w-60 lg:w-64 bg-white border-r border-slate-200/90 fixed inset-y-0 left-0 h-screen z-30 select-none overflow-hidden">
         {/* App Brand Header */}
         <div className="p-5 lg:p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -83,9 +83,6 @@ export const AppShell: React.FC = () => {
               >
                 <Icon className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-[#255CC1]' : 'text-slate-500'}`} />
                 <span>{item.label}</span>
-                {active && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#255CC1]" />
-                )}
               </NavLink>
             );
           })}
@@ -147,10 +144,10 @@ export const AppShell: React.FC = () => {
         </header>
       )}
 
-      {/* Main Content Area */}
+      {/* Main Content Area (Offset by fixed desktop sidebar on md+) */}
       <main
         ref={mainRef}
-        className={`flex-1 min-w-0 md:h-full md:overflow-y-auto ${
+        className={`flex-1 min-w-0 md:ml-60 lg:ml-64 md:h-full md:overflow-y-auto ${
           isSessionActive 
             ? 'pb-4 pt-1 md:pt-4' 
             : 'pb-28 sm:pb-32 md:pb-8 pt-2 md:pt-6'

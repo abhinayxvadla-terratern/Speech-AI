@@ -228,13 +228,13 @@ export const Speak: React.FC = () => {
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto text-[#111111] animate-fadeIn">
+    <div className="space-y-4 sm:space-y-6 max-w-3xl mx-auto text-[#111111] animate-fadeIn pb-6">
       {/* Page Header */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center border border-blue-100 shrink-0">
-              <Mic className="w-5 h-5" />
+      <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center border border-blue-100 shrink-0">
+              <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
               <h1 className="font-heading font-extrabold text-xl sm:text-2xl text-[#00215C] tracking-tight">
@@ -253,7 +253,7 @@ export const Speak: React.FC = () => {
         </div>
 
         {/* Progress Bar Row */}
-        <div className="mt-4 space-y-2">
+        <div className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-slate-700">
               Progress: <strong className="text-[#00215C]">{completedCount}</strong> of {totalCount} completed

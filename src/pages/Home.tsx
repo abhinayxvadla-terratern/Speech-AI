@@ -248,205 +248,181 @@ export const Home: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto text-[#111111] animate-fadeIn">
-      {/* Page Title & User Greeting Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1 pb-1">
-        <div>
-          <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
-            Welcome, {profile?.name?.split(' ')[0] || 'Learner'}
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5">
-            German conversational training • {profile?.primary_domain || 'General Professional'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 self-start sm:self-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-100 text-xs font-semibold">
-            <span className="w-2 h-2 rounded-full bg-[#255CC1]" />
-            Level {cefrLevel}
-          </span>
-          {streak && streak.current_streak > 0 && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">
-              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              {streak.current_streak} {streak.current_streak === 1 ? 'day' : 'days'}
-            </span>
-          )}
-        </div>
+    <div className="space-y-4 sm:space-y-5 max-w-3xl mx-auto text-[#111111] animate-fadeIn pb-6">
+      {/* Page Title & User Greeting Header (Clean & uncluttered) */}
+      <div className="pt-1 pb-1">
+        <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
+          Welcome back, {profile?.name?.split(' ')[0] || 'Learner'}
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+          German Spoken Training • {profile?.primary_domain || 'General Professional'}
+        </p>
       </div>
 
-      {/* 1. QUICK SIMULATION HERO CARD (Terratern Navy & Blue) */}
+      {/* 1. PRIMARY HERO CARD: TODAY'S SPOKEN WORKOUT (Priority #1) */}
       <div className="bg-gradient-to-br from-[#00215C] via-[#05296e] to-[#0f388a] rounded-2xl p-6 sm:p-7 text-white shadow-card border border-[#00215C]/20 relative overflow-hidden">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/15 text-white border border-white/20 backdrop-blur-xs">
-              Quick Simulation
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#f1c819] text-[#00215C] font-extrabold shadow-xs">
+              Today's Spoken Workout
             </span>
-            <span className="text-xs text-blue-100 font-medium">Daily Dialogue Practice</span>
+            {nextModule && (
+              <span className="text-xs text-blue-100 font-medium">
+                Module {nextModule.module_number} • Level {cefrLevel}
+              </span>
+            )}
           </div>
           <Sparkles className="w-4 h-4 text-blue-200" />
         </div>
 
-        <h2 className="font-heading font-extrabold text-2xl sm:text-3xl text-white tracking-tight">
-          Start Voice Practice
-        </h2>
-        <p className="text-xs sm:text-sm text-blue-100/90 mt-1 max-w-lg leading-relaxed font-normal">
-          Select duration to begin an instant German roleplay scenario:
-        </p>
-
-        {/* 3 Quick-Start Buttons */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-4 sm:mt-5">
-          {[5, 10, 15].map((mins) => (
-            <button
-              key={mins}
-              onClick={() => handleQuickStart(mins)}
-              className="min-w-0 py-2.5 sm:py-3 px-1.5 sm:px-2 rounded-xl bg-white text-[#00215C] hover:bg-slate-50 transition-all font-semibold text-xs sm:text-sm shadow-xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 group border border-slate-100"
-            >
-              <span className="font-heading font-extrabold text-base sm:text-xl text-[#00215C] leading-none">
-                {mins} <span className="text-[11px] sm:text-xs font-semibold text-slate-500">min</span>
-              </span>
-              <span className="text-[10px] sm:text-[11px] text-[#255CC1] font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-1 mt-0.5">
-                Launch <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-[#255CC1]" />
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 2. STREAK + STATS ROW (Unified classic cards) */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {/* Current Streak */}
-        <div className="min-w-0 bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
-          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
-            Daily Streak
-          </span>
-          <div className="flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5">
-            <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 fill-amber-500 shrink-0" />
-            <span className="font-heading font-extrabold text-lg sm:text-2xl text-[#00215C]">
-              {streak?.current_streak ?? 0}
-            </span>
-            <span className="text-xs font-medium text-slate-500 hidden sm:inline">days</span>
-          </div>
-          <span className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
-            Active streak
-          </span>
-        </div>
-
-        {/* Modules Completed */}
-        <div className="min-w-0 bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
-          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
-            Modules
-          </span>
-          <div className="flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
-            <span className="font-heading font-extrabold text-lg sm:text-2xl text-[#00215C]">
-              {completedModulesCount}
-            </span>
-          </div>
-          <span className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">Completed</span>
-        </div>
-
-        {/* Last Session Date */}
-        <div className="min-w-0 bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
-          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
-            Last Active
-          </span>
-          <div className="flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5 min-w-0">
-            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#255CC1] shrink-0" />
-            <span className="font-heading font-bold text-xs sm:text-base text-[#00215C] truncate">
-              {formatRelativeDate(streak?.last_session_date || null)}
-            </span>
-          </div>
-          <span className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
-            {streak?.total_sessions || 0} sessions
-          </span>
-        </div>
-      </div>
-
-      {/* 3. NEXT RECOMMENDED ACTION CARD */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs hover:border-slate-300 transition-colors">
-        <span className="text-xs font-bold text-[#255CC1] uppercase tracking-wider block mb-1">
-          Recommended Next Step
-        </span>
-
         {allModulesCompleted ? (
           <div className="space-y-3 pt-1">
-            <h3 className="font-heading font-extrabold text-lg sm:text-xl text-[#00215C]">
-              You've completed all available {cefrLevel} content!
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-              Explore Scenarios or Mock Interviews to continue practicing.
+            <h2 className="font-heading font-extrabold text-2xl sm:text-3xl text-white tracking-tight">
+              You've completed all {cefrLevel} modules!
+            </h2>
+            <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed font-normal max-w-lg">
+              Reinforce your fluency with realistic workplace roleplays or mock interviews.
             </p>
-            <div className="flex items-center gap-2.5 pt-1">
+            <div className="flex items-center gap-2.5 pt-2">
               <Link
                 to="/scenarios"
-                className="px-4 py-2.5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+                className="px-5 py-2.5 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-extrabold text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs transition-colors"
               >
-                <Compass className="w-4 h-4 text-blue-200" />
+                <Compass className="w-4 h-4 text-[#00215C]" />
                 <span>Explore Scenarios</span>
               </Link>
               <Link
                 to="/interview"
-                className="px-4 py-2.5 rounded-xl bg-[#EBF2FF] hover:bg-blue-100 text-[#00215C] text-xs font-semibold flex items-center gap-1.5 transition-colors border border-blue-100"
+                className="px-5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs sm:text-sm inline-flex items-center gap-2 transition-colors border border-white/20"
               >
-                <Briefcase className="w-4 h-4 text-[#255CC1]" />
-                <span>Practice Interviews</span>
+                <Briefcase className="w-4 h-4 text-blue-200" />
+                <span>Mock Interviews</span>
               </Link>
             </div>
           </div>
         ) : nextModule ? (
-          <div className="space-y-2.5 pt-1">
-            <div className="flex items-center gap-2">
-              {nextModule.is_checkpoint ? (
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#255CC1] border border-blue-200">
-                  Checkpoint Milestone
-                </span>
-              ) : (
-                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                  Module {nextModule.module_number}
-                </span>
-              )}
-            </div>
-
-            <h3 className="font-heading font-extrabold text-lg sm:text-xl text-[#00215C] leading-snug">
-              {nextModule.is_checkpoint ? 'Time for a checkpoint!' : nextModule.title}
-            </h3>
-
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-              {nextModule.micro_skill}
+          <div className="space-y-2 pt-1">
+            <h2 className="font-heading font-extrabold text-2xl sm:text-3xl text-white tracking-tight leading-snug">
+              {nextModule.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-blue-100/90 max-w-lg leading-relaxed font-normal">
+              {nextModule.micro_skill || 'Master natural German spoken phrasing with immediate AI feedback.'}
             </p>
 
-            <div className="pt-2">
+            <div className="pt-3">
               <button
                 onClick={() =>
                   navigate('/speak', {
                     state: { autoOpenModuleId: nextModule.id },
                   })
                 }
-                className="px-5 py-2.5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-2 shadow-xs transition-all active:scale-[0.99]"
+                className="py-3 px-6 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-extrabold text-sm sm:text-base inline-flex items-center gap-2 shadow-md active:scale-[0.99] transition-all cursor-pointer"
               >
-                <span>Continue</span>
-                <ArrowRight className="w-4 h-4 text-blue-200" />
+                <span>Start Today's Workout (5 min)</span>
+                <ArrowRight className="w-4 h-4 text-[#00215C]" />
               </button>
             </div>
           </div>
         ) : (
-          <div className="space-y-2.5 pt-1">
-            <h3 className="font-heading font-extrabold text-lg sm:text-xl text-[#00215C]">
+          <div className="space-y-2 pt-1">
+            <h2 className="font-heading font-extrabold text-2xl sm:text-3xl text-white tracking-tight">
               Workplace Situational Practice
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-              Specialized conversational practice for your field.
+            </h2>
+            <p className="text-xs sm:text-sm text-blue-100/90 max-w-lg leading-relaxed font-normal">
+              Practice specialized conversational German tailored for your professional domain.
             </p>
-            <div className="pt-1">
+            <div className="pt-3">
               <Link
                 to="/scenarios"
-                className="px-5 py-2.5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-2 shadow-xs transition-all"
+                className="py-3 px-6 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-extrabold text-sm sm:text-base inline-flex items-center gap-2 shadow-md active:scale-[0.99] transition-all"
               >
-                <span>Go to Scenarios</span>
-                <ArrowRight className="w-4 h-4 text-blue-200" />
+                <span>Start Scenario Practice</span>
+                <ArrowRight className="w-4 h-4 text-[#00215C]" />
               </Link>
             </div>
           </div>
         )}
+      </div>
+
+      {/* 2. STREAK + STATS ROW (Clean 3-column metric cards) */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {/* Current Streak */}
+        <div className="min-w-0 bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
+            Daily Streak
+          </span>
+          <div className="flex items-center gap-1 sm:gap-1.5 mt-1">
+            <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 fill-amber-500 shrink-0" />
+            <span className="font-heading font-extrabold text-lg sm:text-2xl text-[#00215C]">
+              {streak?.current_streak ?? 0}
+            </span>
+            <span className="text-xs font-medium text-slate-500 hidden sm:inline">days</span>
+          </div>
+          <span className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">
+            Active streak
+          </span>
+        </div>
+
+        {/* Modules Completed */}
+        <div className="min-w-0 bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
+            Completed
+          </span>
+          <div className="flex items-center gap-1 sm:gap-1.5 mt-1">
+            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
+            <span className="font-heading font-extrabold text-lg sm:text-2xl text-[#00215C]">
+              {completedModulesCount}
+            </span>
+            <span className="text-xs font-medium text-slate-500 hidden sm:inline">modules</span>
+          </div>
+          <span className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">Level {cefrLevel}</span>
+        </div>
+
+        {/* Last Session Date */}
+        <div className="min-w-0 bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
+            Last Active
+          </span>
+          <div className="flex items-center gap-1 sm:gap-1.5 mt-1 min-w-0">
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#255CC1] shrink-0" />
+            <span className="font-heading font-bold text-xs sm:text-base text-[#00215C] truncate">
+              {formatRelativeDate(streak?.last_session_date || null)}
+            </span>
+          </div>
+          <span className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">
+            {streak?.total_sessions || 0} sessions
+          </span>
+        </div>
+      </div>
+
+      {/* 3. QUICK SIMULATION ROW (Compact Roleplay Shortcut) */}
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-[#255CC1] border border-blue-100">
+              Instant Roleplay
+            </span>
+            <h3 className="font-heading font-bold text-sm sm:text-base text-[#00215C]">
+              Quick Spoken Simulation
+            </h3>
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5 font-normal">
+            Practice spontaneous conversation in a realistic scenario
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 shrink-0">
+          {[5, 10, 15].map((mins) => (
+            <button
+              key={mins}
+              onClick={() => handleQuickStart(mins)}
+              className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-[#EBF2FF] text-[#00215C] hover:text-[#255CC1] border border-slate-200/70 hover:border-blue-200 transition-all font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs active:scale-[0.98] cursor-pointer"
+            >
+              <span>{mins}m</span>
+              <Play className="w-2.5 h-2.5 fill-current" />
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* 4. DEADLINE CARD (ONLY shown if profiles.urgency_date is set) */}

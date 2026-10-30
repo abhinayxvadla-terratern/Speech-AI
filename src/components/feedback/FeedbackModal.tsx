@@ -157,8 +157,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
-      <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl border border-slate-200/80 my-8 text-[#111111] space-y-5">
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+      <div className="bg-white rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl border border-slate-200/80 my-auto text-[#111111] space-y-4 sm:space-y-5 max-h-[92dvh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-1 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -166,7 +166,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               <MessageSquarePlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-heading font-extrabold text-lg text-[#00215C]">
+              <h3 className="font-heading font-extrabold text-base sm:text-lg text-[#00215C]">
                 Rate & Send Feedback
               </h3>
               <p className="text-xs text-slate-500">
@@ -177,7 +177,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
           <button
             onClick={handleClose}
-            className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+            className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -293,8 +293,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             {/* 2. Category Dropdown with Multiselect (Optional) */}
             <div className="space-y-1.5 relative" ref={dropdownRef}>
               <div className="flex items-center justify-between">
-                <label className="font-bold text-[#00215C] block">
-                  Feedback Category <span className="text-[10px] font-normal text-slate-400">(Optional • Multi-select)</span>
+                <label className="font-bold text-[#00215C] block text-xs">
+                  Category <span className="text-[10px] font-normal text-slate-400">(Optional • Choose one or more)</span>
                 </label>
                 {selectedCategories.length > 0 && (
                   <button
@@ -319,7 +319,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               >
                 <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
                   {selectedCategories.length === 0 ? (
-                    <span className="text-slate-400 text-xs">Select categories (optional)...</span>
+                    <span className="text-slate-400 text-xs">Choose category (optional)...</span>
                   ) : (
                     selectedCategories.map((catVal) => {
                       const matched = CATEGORIES.find((c) => c.value === catVal);
@@ -331,6 +331,15 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                         >
                           <Icon className="w-3 h-3 text-[#255CC1]" />
                           <span>{catVal}</span>
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCategory(catVal);
+                            }}
+                            className="p-0.5 hover:bg-blue-200/60 rounded cursor-pointer"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </span>
                         </span>
                       );
                     })
@@ -338,8 +347,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 </div>
                 <div className="flex items-center gap-1 shrink-0 text-slate-400">
                   {selectedCategories.length > 0 && (
-                    <span className="text-[10px] font-bold bg-slate-100 px-1.5 py-0.5 rounded-full text-slate-600">
-                      {selectedCategories.length}
+                    <span className="text-[10px] font-bold bg-[#EBF2FF] px-1.5 py-0.5 rounded-full text-[#255CC1]">
+                      {selectedCategories.length} selected
                     </span>
                   )}
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen ? 'rotate-180 text-[#255CC1]' : ''}`} />

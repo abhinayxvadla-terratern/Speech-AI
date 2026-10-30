@@ -926,7 +926,6 @@ export const Profile: React.FC = () => {
       <FeedbackModal
         isOpen={feedbackModalOpen}
         onClose={() => setFeedbackModalOpen(false)}
-        defaultCategory="Bug"
       />
     </div>
   );
