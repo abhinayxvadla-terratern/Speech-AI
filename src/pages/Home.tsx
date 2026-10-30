@@ -14,13 +14,17 @@ import {
   TrendingDown, 
   Compass, 
   Briefcase, 
-  Loader2
+  Loader2,
+  Smartphone
 } from 'lucide-react';
 import { AppLogo } from '../components/common/AppLogo';
+import { usePwaInstall } from '../hooks/usePwaInstall';
+import { PWAInstallInstructionsModal } from '../components/pwa/PWAInstallInstructionsModal';
 
 export const Home: React.FC = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { isInstalled, installApp, showInstructionsModal, setShowInstructionsModal } = usePwaInstall();
   const cefrLevel = (profile?.cefr_level as CefrLevel) || 'B1';
   const isC1C2 = cefrLevel === 'C1' || cefrLevel === 'C2';
 
@@ -223,10 +227,10 @@ export const Home: React.FC = () => {
           <div className="mt-8 w-full">
             <Link
               to={isC1C2 ? '/scenarios' : '/speak'}
-              className="w-full py-3.5 px-6 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-bold text-sm sm:text-base inline-flex items-center justify-center gap-2.5 shadow-xs active:scale-[0.99] transition-all"
+              className="w-full py-3.5 px-6 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white font-bold text-sm sm:text-base inline-flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
             >
               <span>Start Practice</span>
-              <ArrowRight className="w-4 h-4 text-[#00215C]" />
+              <ArrowRight className="w-4 h-4 text-blue-200" />
             </Link>
           </div>
         </div>
@@ -249,30 +253,39 @@ export const Home: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-5 max-w-3xl mx-auto text-[#111111] animate-fadeIn pb-6">
-      {/* Page Title & User Greeting Header (Clean & uncluttered) */}
-      <div className="pt-1 pb-1">
-        <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
-          Welcome back, {profile?.name?.split(' ')[0] || 'Learner'}
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-          German Spoken Training • {profile?.primary_domain || 'General Professional'}
-        </p>
+      {/* Page Title & User Greeting Header (with Level on the right) */}
+      <div className="flex items-center justify-between gap-3 pt-1 pb-1">
+        <div>
+          <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
+            Welcome back, {profile?.name?.split(' ')[0] || 'Learner'}
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+            German Spoken Training • {profile?.primary_domain || 'General Professional'}
+          </p>
+        </div>
+        <div className="shrink-0">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/80 text-xs font-bold shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-[#255CC1]" />
+            Level {cefrLevel}
+          </span>
+        </div>
       </div>
 
-      {/* 1. PRIMARY HERO CARD: TODAY'S SPOKEN WORKOUT (Priority #1) */}
-      <div className="bg-gradient-to-br from-[#00215C] via-[#05296e] to-[#0f388a] rounded-2xl p-6 sm:p-7 text-white shadow-card border border-[#00215C]/20 relative overflow-hidden">
+      {/* 1. PRIMARY HERO CARD: TODAY'S SPOKEN WORKOUT (Classic & Clean - Deep Navy & White) */}
+      <div className="bg-gradient-to-br from-[#00215C] via-[#052d75] to-[#0a3a96] rounded-3xl p-6 sm:p-7 text-white shadow-card border border-[#00215C]/20 relative overflow-hidden">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#f1c819] text-[#00215C] font-extrabold shadow-xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white border border-white/20 backdrop-blur-xs shadow-2xs flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-blue-200" />
               Today's Spoken Workout
             </span>
             {nextModule && (
-              <span className="text-xs text-blue-100 font-medium">
-                Module {nextModule.module_number} • Level {cefrLevel}
+              <span className="text-xs text-blue-200/90 font-semibold">
+                Module {nextModule.module_number}
               </span>
             )}
           </div>
-          <Sparkles className="w-4 h-4 text-blue-200" />
+          <Sparkles className="w-4 h-4 text-blue-200/70" />
         </div>
 
         {allModulesCompleted ? (
@@ -286,9 +299,9 @@ export const Home: React.FC = () => {
             <div className="flex items-center gap-2.5 pt-2">
               <Link
                 to="/scenarios"
-                className="px-5 py-2.5 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-extrabold text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs transition-colors"
+                className="px-5 py-2.5 rounded-xl bg-white hover:bg-blue-50 text-[#00215C] font-extrabold text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs transition-colors"
               >
-                <Compass className="w-4 h-4 text-[#00215C]" />
+                <Compass className="w-4 h-4 text-[#255CC1]" />
                 <span>Explore Scenarios</span>
               </Link>
               <Link
@@ -316,10 +329,14 @@ export const Home: React.FC = () => {
                     state: { autoOpenModuleId: nextModule.id },
                   })
                 }
-                className="py-3 px-6 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-extrabold text-sm sm:text-base inline-flex items-center gap-2 shadow-md active:scale-[0.99] transition-all cursor-pointer"
+                className="py-3 px-6 rounded-xl bg-white hover:bg-blue-50 text-[#00215C] font-extrabold text-xs sm:text-sm inline-flex items-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer group"
               >
-                <span>Start Today's Workout (5 min)</span>
-                <ArrowRight className="w-4 h-4 text-[#00215C]" />
+                <span>
+                  {nextModule.is_checkpoint
+                    ? 'Start Checkpoint Milestone (5 min)'
+                    : "Start Today's Workout (5 min)"}
+                </span>
+                <ArrowRight className="w-4 h-4 text-[#255CC1] group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
@@ -334,10 +351,10 @@ export const Home: React.FC = () => {
             <div className="pt-3">
               <Link
                 to="/scenarios"
-                className="py-3 px-6 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-extrabold text-sm sm:text-base inline-flex items-center gap-2 shadow-md active:scale-[0.99] transition-all"
+                className="py-3 px-6 rounded-xl bg-white hover:bg-blue-50 text-[#00215C] font-extrabold text-xs sm:text-sm inline-flex items-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all group"
               >
                 <span>Start Scenario Practice</span>
-                <ArrowRight className="w-4 h-4 text-[#00215C]" />
+                <ArrowRight className="w-4 h-4 text-[#255CC1] group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           </div>
@@ -493,6 +510,39 @@ export const Home: React.FC = () => {
           </p>
         </div>
       )}
+
+      {/* 6. MOBILE GET APP BANNER (Only shown on mobile when app is not installed - disappears on install) */}
+      {!isInstalled && (
+        <div className="block md:hidden bg-gradient-to-r from-[#00215C] via-[#052d75] to-[#0a3a96] rounded-2xl p-4 text-white shadow-md border border-blue-900/40 animate-fadeIn">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0 border border-white/15">
+                <Smartphone className="w-5 h-5 text-blue-200" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-heading font-extrabold text-xs sm:text-sm text-white leading-tight">
+                  Get SpeechAI App
+                </h4>
+                <p className="text-[11px] text-blue-200/90 leading-tight mt-0.5 truncate font-normal">
+                  Add to Home Screen for fast voice practice
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={installApp}
+              className="px-4 py-2 rounded-xl bg-white hover:bg-blue-50 text-[#00215C] text-xs font-extrabold shrink-0 shadow-xs cursor-pointer active:scale-[0.97] transition-all"
+            >
+              Get App
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* PWA Install Instructions Modal for mobile */}
+      <PWAInstallInstructionsModal
+        isOpen={showInstructionsModal}
+        onClose={() => setShowInstructionsModal(false)}
+      />
     </div>
   );
 };

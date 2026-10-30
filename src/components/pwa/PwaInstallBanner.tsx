@@ -42,11 +42,11 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({ className = 
 
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#f1c819] text-[#00215C]">
+                <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-white/20 text-white">
                   {isIOS ? 'iOS Home Screen' : 'App Available'}
                 </span>
                 <span className="text-white/60 text-xs hidden sm:inline flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-[#f1c819]" /> Fast & Offline Shell
+                  <Sparkles className="w-3 h-3 text-blue-200" /> Fast & Offline Shell
                 </span>
               </div>
 
@@ -79,7 +79,7 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({ className = 
                 ) : (
                   <button
                     onClick={() => promptInstall()}
-                    className="inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-[#f1c819] text-[#00215C] hover:bg-[#e6bd0d] font-bold text-xs shadow-xs transition-colors"
+                    className="inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-white text-[#00215C] hover:bg-blue-50 font-bold text-xs shadow-xs transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>{hasNativePrompt ? 'Install App' : 'Add to Device'}</span>

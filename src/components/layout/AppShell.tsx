@@ -6,12 +6,15 @@ import {
   Compass, 
   Briefcase, 
   User, 
-  LogOut
+  LogOut,
+  Download
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useActiveSession } from '../../contexts/ActiveSessionContext';
 import { realVoiceAdapter } from '../../services/voice/voiceAdapter.real';
 import { AppLogo } from '../common/AppLogo';
+import { usePwaInstall } from '../../hooks/usePwaInstall';
+import { PWAInstallInstructionsModal } from '../pwa/PWAInstallInstructionsModal';
 
 interface NavItem {
   label: string;
@@ -30,6 +33,7 @@ const navItems: NavItem[] = [
 export const AppShell: React.FC = () => {
   const { profile, signOut } = useAuth();
   const { isSessionActive } = useActiveSession();
+  const { isInstalled, installApp, showInstructionsModal, setShowInstructionsModal } = usePwaInstall();
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
 
@@ -87,6 +91,32 @@ export const AppShell: React.FC = () => {
             );
           })}
         </nav>
+
+        {/* Separate "Get App" Card in Desktop Sidebar (Only shown if app is not installed) */}
+        {!isInstalled && (
+          <div className="mx-3.5 mb-3 p-3.5 rounded-2xl bg-gradient-to-br from-[#EBF2FF] via-blue-50/50 to-white border border-blue-200/80 shadow-2xs space-y-2.5 shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#00215C] text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Download className="w-4 h-4 text-blue-200" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-heading font-extrabold text-xs text-[#00215C] leading-tight">
+                  Get Desktop App
+                </h4>
+                <p className="text-[10px] text-slate-500 truncate leading-tight mt-0.5 font-normal">
+                  Fast 1-click voice training
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={installApp}
+              className="w-full py-2 px-3 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Install App</span>
+            </button>
+          </div>
+        )}
 
         {/* User Card & Logout (Desktop Bottom) */}
         <div className="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
@@ -189,6 +219,11 @@ export const AppShell: React.FC = () => {
           </div>
         </nav>
       )}
+      {/* PWA Install Instructions Modal */}
+      <PWAInstallInstructionsModal
+        isOpen={showInstructionsModal}
+        onClose={() => setShowInstructionsModal(false)}
+      />
     </div>
   );
 };

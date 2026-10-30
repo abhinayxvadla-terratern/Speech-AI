@@ -438,10 +438,10 @@ export const Scenarios: React.FC = () => {
             <button
               type="button"
               onClick={handleStartSelectedMode}
-              className="w-full sm:w-auto min-w-[240px] px-8 py-3.5 rounded-xl bg-[#f1c819] hover:bg-[#e6bd0d] text-[#00215C] font-bold text-sm shadow-card hover:shadow-brand transition-all flex items-center justify-center gap-2.5 group active:scale-[0.99]"
+              className="w-full sm:w-auto min-w-[240px] px-8 py-3.5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2.5 group active:scale-[0.99] cursor-pointer"
             >
               <span>Start voice session</span>
-              <Play className="w-4 h-4 fill-current text-[#00215C] group-hover:scale-110 transition-transform" />
+              <Play className="w-4 h-4 fill-white text-white group-hover:scale-110 transition-transform" />
             </button>
             <span className="sr-only">
               {selectedMode === 'learn' ? 'Start Learn Mode' : 'Start Practice Mode'}
