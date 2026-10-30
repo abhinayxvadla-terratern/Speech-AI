@@ -7,6 +7,7 @@ import {
   VoiceState,
   VoiceStateCallback,
   SessionEndedCallback,
+  SpeechSegment,
 } from './types';
 
 interface InternalSessionState {
@@ -128,7 +129,7 @@ class StubVoiceAdapter implements VoiceAdapter {
     };
   }
 
-  async sendAudio(sessionHandle: VoiceSessionHandle, _audioChunk?: any): Promise<void> {
+  async sendAudio(sessionHandle: VoiceSessionHandle, _audioChunk?: any, _clientTranscript?: string): Promise<void> {
     const session = this.sessions.get(sessionHandle.id);
     if (!session) {
       throw new Error(`Session ${sessionHandle.id} does not exist`);
@@ -211,6 +212,16 @@ class StubVoiceAdapter implements VoiceAdapter {
         console.error('Error in onTranscript callback for agent speak:', err);
       }
     });
+  }
+
+  async speakSegments(sessionHandle: VoiceSessionHandle, segments: SpeechSegment[]): Promise<void> {
+    const combinedText = segments.map((s) => s.text).join('\n\n');
+    await this.speak(sessionHandle, combinedText);
+  }
+
+  async speakPracticeReview(sessionHandle: VoiceSessionHandle): Promise<void> {
+    const reviewText = "Session complete! Here is your quick review: First, you maintained a natural conversational pace. Second, keep an eye on case agreement. Great work today!";
+    await this.speak(sessionHandle, reviewText);
   }
 
   stopSpeaking(_sessionHandle?: VoiceSessionHandle): void {

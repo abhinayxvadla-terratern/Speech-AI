@@ -319,25 +319,35 @@ export class RealVoiceAdapter implements VoiceAdapter {
 
   /**
    * Transcribe audio using Groq Whisper STT (model: whisper-large-v3, language: de).
+   * Supports WAV, WebM, OGG, MP3 and falls back smoothly to client speech recognition if needed.
    */
   private async transcribeAudio(
     session: InternalSessionState,
-    audioChunk?: any
+    audioChunk?: any,
+    clientTranscript?: string
   ): Promise<{ transcript: string; confidence: 'high' | 'medium' | 'low' }> {
     const apiKey = this.getApiKey();
 
     let fileToSend: any;
 
     if (audioChunk instanceof Blob || audioChunk instanceof File) {
-      fileToSend =
-        audioChunk instanceof File
-          ? audioChunk
-          : new File([audioChunk], 'recording.wav', { type: audioChunk.type || 'audio/wav' });
+      if (audioChunk instanceof File) {
+        fileToSend = audioChunk;
+      } else {
+        const rawType = audioChunk.type || 'audio/wav';
+        let filename = 'recording.wav';
+        if (rawType.includes('webm')) filename = 'recording.webm';
+        else if (rawType.includes('ogg')) filename = 'recording.ogg';
+        else if (rawType.includes('mp4') || rawType.includes('m4a')) filename = 'recording.m4a';
+        else if (rawType.includes('mp3') || rawType.includes('mpeg')) filename = 'recording.mp3';
+        fileToSend = new File([audioChunk], filename, { type: rawType });
+      }
     } else if (typeof Buffer !== 'undefined' && Buffer.isBuffer(audioChunk)) {
-      fileToSend = new File([audioChunk as any], 'audio.mp3', { type: 'audio/mpeg' });
+      fileToSend = new File([audioChunk as any], 'recording.mp3', { type: 'audio/mpeg' });
+    } else if (clientTranscript && clientTranscript.trim().length > 0) {
+      return { transcript: clientTranscript.trim(), confidence: 'high' };
     } else {
-      // If no raw audio chunk was provided (e.g. simulated input in UI), generate a real audio sample
-      // using Edge TTS so Groq Whisper genuinely transcribes actual German speech.
+      // If no raw audio chunk was provided and no client transcript, check if fallback phrase needed
       const fallbackText =
         session.context.targetPhrase ||
         session.context.title ||
@@ -377,6 +387,9 @@ export class RealVoiceAdapter implements VoiceAdapter {
     }
 
     if (!fileToSend) {
+      if (clientTranscript && clientTranscript.trim().length > 0) {
+        return { transcript: clientTranscript.trim(), confidence: 'medium' };
+      }
       throw new Error('Groq Whisper STT failed: No audio data available for transcription.');
     }
 
@@ -390,42 +403,57 @@ export class RealVoiceAdapter implements VoiceAdapter {
       "This is a language learner's German speech practice attempt. It may contain grammar errors, wrong word order, incorrect case usage, or mispronunciations. Transcribe exactly what is said, including any mistakes — do not correct, normalize, or autocorrect the German toward what a fluent speaker would have said."
     );
 
-    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: form,
-    });
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: form,
+      });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Groq Whisper STT API error (HTTP ${res.status}): ${errText}`);
-    }
-
-    const data = await res.json();
-    const transcript = (data.text || '').trim();
-
-    if (!transcript) {
-      throw new Error('Groq Whisper STT returned an empty transcription.');
-    }
-
-    // Determine confidence from segment log probabilities if available
-    let confidence: 'high' | 'medium' | 'low' = 'high';
-    if (Array.isArray(data.segments) && data.segments.length > 0) {
-      const avgLogprob =
-        data.segments.reduce((acc: number, s: any) => acc + (typeof s.avg_logprob === 'number' ? s.avg_logprob : 0), 0) /
-        data.segments.length;
-      if (avgLogprob < -0.85) {
-        confidence = 'low';
-      } else if (avgLogprob < -0.5) {
-        confidence = 'medium';
-      } else {
-        confidence = 'high';
+      if (!res.ok) {
+        const errText = await res.text();
+        console.warn(`[RealVoiceAdapter] Groq Whisper STT API error (HTTP ${res.status}): ${errText}`);
+        if (clientTranscript && clientTranscript.trim().length > 0) {
+          return { transcript: clientTranscript.trim(), confidence: 'medium' };
+        }
+        throw new Error(`Groq Whisper STT API error (HTTP ${res.status}): ${errText}`);
       }
-    }
 
-    return { transcript, confidence };
+      const data = await res.json();
+      const transcript = (data.text || '').trim();
+
+      if (!transcript) {
+        if (clientTranscript && clientTranscript.trim().length > 0) {
+          return { transcript: clientTranscript.trim(), confidence: 'medium' };
+        }
+        throw new Error('Groq Whisper STT returned an empty transcription.');
+      }
+
+      // Determine confidence from segment log probabilities if available
+      let confidence: 'high' | 'medium' | 'low' = 'high';
+      if (Array.isArray(data.segments) && data.segments.length > 0) {
+        const avgLogprob =
+          data.segments.reduce((acc: number, s: any) => acc + (typeof s.avg_logprob === 'number' ? s.avg_logprob : 0), 0) /
+          data.segments.length;
+        if (avgLogprob < -0.85) {
+          confidence = 'low';
+        } else if (avgLogprob < -0.5) {
+          confidence = 'medium';
+        } else {
+          confidence = 'high';
+        }
+      }
+
+      return { transcript, confidence };
+    } catch (fetchErr: any) {
+      if (clientTranscript && clientTranscript.trim().length > 0) {
+        console.warn('[RealVoiceAdapter] Groq Whisper network error, falling back to client transcript:', fetchErr);
+        return { transcript: clientTranscript.trim(), confidence: 'medium' };
+      }
+      throw fetchErr;
+    }
   }
 
   /**
@@ -715,7 +743,7 @@ export class RealVoiceAdapter implements VoiceAdapter {
    * 4. Parse JSON (with retry if needed).
    * 5. Speak reply/feedback via Edge TTS.
    */
-  async sendAudio(sessionHandle: VoiceSessionHandle, audioChunk?: any): Promise<void> {
+  async sendAudio(sessionHandle: VoiceSessionHandle, audioChunk?: any, clientTranscript?: string): Promise<void> {
     const session = this.sessions.get(sessionHandle.id);
     if (!session) {
       throw new Error(`Session ${sessionHandle.id} does not exist`);
@@ -730,13 +758,18 @@ export class RealVoiceAdapter implements VoiceAdapter {
     let transcript = '';
     let sttConfidence: 'high' | 'medium' | 'low' = 'high';
     try {
-      const sttRes = await this.transcribeAudio(session, audioChunk);
+      const sttRes = await this.transcribeAudio(session, audioChunk, clientTranscript);
       transcript = sttRes.transcript;
       sttConfidence = sttRes.confidence;
     } catch (err: any) {
-      this.updateState(session, 'idle');
-      console.error('[RealVoiceAdapter] STT error:', err);
-      throw new Error(`Speech recognition error: ${err.message || 'Failed to transcribe audio'}`);
+      if (clientTranscript && clientTranscript.trim().length > 0) {
+        transcript = clientTranscript.trim();
+        sttConfidence = 'medium';
+      } else {
+        this.updateState(session, 'idle');
+        console.error('[RealVoiceAdapter] STT error:', err);
+        throw new Error(`Speech recognition error: ${err.message || 'Failed to transcribe audio'}`);
+      }
     }
 
     // Push and notify user transcript with raw verbatim text

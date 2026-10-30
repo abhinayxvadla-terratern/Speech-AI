@@ -18,7 +18,8 @@ import {
   HelpCircle,
   Clock,
   Sparkles,
-  Square
+  Square,
+  X
 } from 'lucide-react';
 import { AppLogo } from '../../components/common/AppLogo';
 
@@ -288,28 +289,31 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
   }, [user, interviewTypeName, mode, pressureMode, isOpenInterview]);
 
   // Deliver recorded audio chunk to voiceAdapter automatically upon VAD speech-end
-  const handleDeliverAudio = useCallback(async (audioBlob?: Blob) => {
+  const handleDeliverAudio = useCallback(async (audioBlob?: Blob, clientTranscript?: string) => {
     if (!sessionHandle) return;
     if (voiceAdapter.cancelSilenceTimer) {
       voiceAdapter.cancelSilenceTimer(sessionHandle);
     }
     try {
       setErrorMsg(null);
-      await voiceAdapter.sendAudio(sessionHandle, audioBlob);
+      await voiceAdapter.sendAudio(sessionHandle, audioBlob, clientTranscript);
     } catch (err: any) {
       console.error('Error sending audio chunk:', err);
       setErrorMsg('Could not transcribe audio clearly. Please try speaking again.');
     }
   }, [sessionHandle]);
 
-  // Automatic Turn-Taking using Client-Side Voice Activity Detection (VAD)
+  // Automatic Turn-Taking using Client-Side Voice Activity Detection (VAD) & Web Speech
   const {
     isUserSpeaking,
     isManualPaused,
     vadError,
+    volumeLevel,
+    interimTranscript,
     togglePause,
     manualSubmit,
     manualStartSpeaking,
+    requestMicrophonePermission,
   } = useAutoTurnVAD({
     sessionHandle,
     voiceAdapter,
@@ -317,6 +321,13 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
     onSendAudio: handleDeliverAudio,
     enabled: !isFinishing && !completedSummary,
   });
+
+  // Auto-dismiss transient error messages
+  useEffect(() => {
+    if (!errorMsg) return;
+    const t = setTimeout(() => setErrorMsg(null), 6000);
+    return () => clearTimeout(t);
+  }, [errorMsg]);
 
   // Finish session, save diagnostic recap, update streak
   const handleFinishSession = async () => {
@@ -496,9 +507,18 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
       </div>
 
       {errorMsg && (
-        <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{errorMsg}</span>
+        <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-2 shadow-xs animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>{errorMsg}</span>
+          </div>
+          <button
+            onClick={() => setErrorMsg(null)}
+            className="p-1 rounded-lg hover:bg-rose-100 text-rose-500 hover:text-rose-700 transition-colors"
+            title="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -577,9 +597,12 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
         isUserSpeaking={isUserSpeaking}
         isManualPaused={isManualPaused}
         vadError={vadError}
+        volumeLevel={volumeLevel}
+        interimTranscript={interimTranscript}
         onTogglePause={togglePause}
         onManualSubmit={manualSubmit}
         onManualStartSpeaking={manualStartSpeaking}
+        onRequestPermission={requestMicrophonePermission}
         agentName="Interviewer"
       />
 

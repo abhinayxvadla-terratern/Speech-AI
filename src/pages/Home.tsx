@@ -17,7 +17,6 @@ import {
   Loader2
 } from 'lucide-react';
 import { AppLogo } from '../components/common/AppLogo';
-import { PwaInstallBanner } from '../components/pwa/PwaInstallBanner';
 
 export const Home: React.FC = () => {
   const { user, profile } = useAuth();
@@ -207,8 +206,6 @@ export const Home: React.FC = () => {
   if (isNewUser) {
     return (
       <div className="space-y-6 max-w-md mx-auto px-4 py-8 text-[#111111]">
-        <PwaInstallBanner />
-
         <div className="min-h-[55vh] flex flex-col items-center justify-center text-center animate-fadeIn">
           {/* Executive Voice Training Icon Badge */}
           <div className="mb-6 flex justify-center">
@@ -252,9 +249,6 @@ export const Home: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto text-[#111111] animate-fadeIn">
-      {/* PWA Dismissible Install Banner */}
-      <PwaInstallBanner />
-
       {/* Page Title & User Greeting Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1 pb-1">
         <div>

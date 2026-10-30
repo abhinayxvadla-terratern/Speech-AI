@@ -23,11 +23,8 @@ import {
   ChevronUp,
   X,
   Check,
-  Smartphone,
   MessageSquarePlus,
 } from 'lucide-react';
-import { usePwaInstall } from '../hooks/usePwaInstall';
-import { IosInstallModal } from '../components/pwa/IosInstallModal';
 import { FeedbackModal } from '../components/feedback/FeedbackModal';
 
 type LevelStatus = 'completed' | 'current' | 'not_tracked' | 'locked';
@@ -79,8 +76,7 @@ export const Profile: React.FC = () => {
   // Export Data Toast State
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
-  // PWA Install & Feedback State
-  const { isStandalone, promptInstall, showIOSModal, setShowIOSModal } = usePwaInstall();
+  // Feedback State
   const [feedbackModalOpen, setFeedbackModalOpen] = useState<boolean>(false);
 
   // Delete Account Dialog State
@@ -672,28 +668,6 @@ export const Profile: React.FC = () => {
                 </button>
               </div>
 
-              {/* Install App (Hidden if already in standalone mode) */}
-              {!isStandalone && (
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center shrink-0">
-                      <Smartphone className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-slate-800 block">Install SpeechAI App</span>
-                      <span className="text-[11px] text-slate-400">Add to home screen or desktop for fast offline shell</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => promptInstall()}
-                    className="px-3 py-1.5 rounded-lg border border-[#255CC1]/30 hover:border-[#255CC1] bg-[#EBF2FF] font-semibold text-[11px] text-[#255CC1] transition-colors shrink-0 flex items-center gap-1"
-                  >
-                    <span>Install</span>
-                  </button>
-                </div>
-              )}
-
               {/* Send Feedback Support Channel */}
               <div className="flex items-center justify-between py-2 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
@@ -953,12 +927,6 @@ export const Profile: React.FC = () => {
         isOpen={feedbackModalOpen}
         onClose={() => setFeedbackModalOpen(false)}
         defaultCategory="Bug"
-      />
-
-      {/* MODAL: IOS INSTALL INSTRUCTIONS */}
-      <IosInstallModal
-        isOpen={showIOSModal}
-        onClose={() => setShowIOSModal(false)}
       />
     </div>
   );

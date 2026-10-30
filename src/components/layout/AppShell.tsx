@@ -97,16 +97,11 @@ export const AppShell: React.FC = () => {
                 <p className="text-xs font-semibold text-[#111111] truncate">
                   {profile?.name || 'Speech Learner'}
                 </p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#EBF2FF] text-[#255CC1]">
-                    {profile?.cefr_level ? `${profile.cefr_level}` : 'B1'}
-                  </span>
-                  {profile?.primary_domain && (
-                    <span className="text-[10px] text-slate-500 truncate">
-                      {profile.primary_domain}
-                    </span>
-                  )}
-                </div>
+                {profile?.primary_domain && (
+                  <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                    {profile.primary_domain}
+                  </p>
+                )}
               </div>
             </div>
           </div>

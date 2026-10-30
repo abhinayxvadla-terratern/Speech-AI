@@ -50,13 +50,20 @@ export type TranscriptCallback = (turn: TranscriptTurn) => void;
 export type VoiceStateCallback = (state: VoiceState) => void;
 export type SessionEndedCallback = (reason: string) => void;
 
+export interface SpeechSegment {
+  text: string;
+  lang: 'en' | 'de';
+}
+
 export interface VoiceAdapter {
   startSession(context: VoiceSessionContext): Promise<VoiceSessionHandle>;
-  sendAudio(sessionHandle: VoiceSessionHandle, audioChunk?: any): Promise<void>;
+  sendAudio(sessionHandle: VoiceSessionHandle, audioChunk?: any, clientTranscript?: string): Promise<void>;
   onTranscript(sessionHandle: VoiceSessionHandle, callback: TranscriptCallback): () => void;
   onStateChange?(sessionHandle: VoiceSessionHandle, callback: VoiceStateCallback): () => void;
   onSessionEnded?(sessionHandle: VoiceSessionHandle, callback: SessionEndedCallback): () => void;
   speak(sessionHandle: VoiceSessionHandle, text: string): Promise<void>;
+  speakSegments?(sessionHandle: VoiceSessionHandle, segments: SpeechSegment[]): Promise<void>;
+  speakPracticeReview?(sessionHandle: VoiceSessionHandle): Promise<void>;
   stopSpeaking?(sessionHandle?: VoiceSessionHandle): void;
   triggerFinalClosingTurn?(sessionHandle: VoiceSessionHandle): Promise<TranscriptTurn | null>;
   endSession(sessionHandle: VoiceSessionHandle): Promise<TranscriptTurn[]>;

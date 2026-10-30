@@ -1,6 +1,5 @@
 import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import fs from 'fs';
 
@@ -202,107 +201,6 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
-      VitePWA({
-        registerType: 'autoUpdate',
-        injectRegister: 'script',
-        includeAssets: [
-          'favicon.png',
-          'apple-touch-icon.png',
-          'pwa-192x192.png',
-          'pwa-512x512.png',
-          'maskable-icon-512x512.png',
-          'logo-emblem.png',
-          'logo-full.png',
-        ],
-        manifest: {
-          name: 'SpeechAI',
-          short_name: 'SpeechAI',
-          description: 'SpeechAI - German for Career & Study',
-          theme_color: '#00215C',
-          background_color: '#FAFBFF',
-          display: 'standalone',
-          orientation: 'portrait-primary',
-          start_url: '/',
-          scope: '/',
-          icons: [
-            {
-              src: '/pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: '/pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: '/maskable-icon-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable',
-            },
-          ],
-        },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm,onnx,woff,woff2,ttf}'],
-          maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
-          navigateFallback: '/index.html',
-          navigateFallbackDenylist: [
-            /^\/api\//,
-            /^https:\/\/.*\.supabase\.co\/.*/,
-          ],
-          runtimeCaching: [
-            // 1. Live NetworkOnly: Supabase API calls, auth requests & realtime
-            {
-              urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-              handler: 'NetworkOnly',
-            },
-            // 2. Live NetworkOnly: Voice sessions, LLM cascade, Edge TTS, API endpoints
-            {
-              urlPattern: /^\/api\/.*/i,
-              handler: 'NetworkOnly',
-            },
-            // 3. NetworkFirst: Dynamic / user data routes & page navigations
-            {
-              urlPattern: ({ request }) => request.mode === 'navigate',
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'app-dynamic-pages',
-                networkTimeoutSeconds: 3,
-              },
-            },
-            // 4. StaleWhileRevalidate for Google Fonts stylesheets
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: 'StaleWhileRevalidate',
-              options: {
-                cacheName: 'google-fonts-stylesheets',
-              },
-            },
-            // 5. CacheFirst for Google Fonts webfonts
-            {
-              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'google-fonts-webfonts',
-                expiration: {
-                  maxEntries: 30,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-          ],
-        },
-        devOptions: {
-          enabled: true,
-          type: 'module',
-        },
-      }),
       edgeTtsDevPlugin(),
       vadDevPlugin(),
       serverApiDevPlugin(),
@@ -320,10 +218,6 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       host: true,
-      headers: {
-        'Cross-Origin-Opener-Policy': 'same-origin',
-        'Cross-Origin-Embedder-Policy': 'credentialless',
-      },
     },
   };
 });
