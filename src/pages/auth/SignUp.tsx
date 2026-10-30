@@ -47,7 +47,14 @@ export const SignUp: React.FC = () => {
       });
 
       if (error) {
-        setErrorMsg(error.message);
+        const msg = error.message.toLowerCase();
+        if (msg.includes('rate limit') || (error as any).status === 429) {
+          setErrorMsg(
+            'Supabase built-in email rate limit exceeded. To resolve this immediately, turn off "Confirm email" in Supabase Dashboard (Authentication > Providers > Email) or set up custom SMTP.'
+          );
+        } else {
+          setErrorMsg(error.message);
+        }
         return;
       }
 

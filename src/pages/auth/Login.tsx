@@ -30,7 +30,16 @@ export const Login: React.FC = () => {
       });
 
       if (error) {
-        setErrorMsg(error.message);
+        const msg = error.message.toLowerCase();
+        if (msg.includes('rate limit') || (error as any).status === 429) {
+          setErrorMsg('Authentication rate limit reached. Please wait a few moments before trying again.');
+        } else if (msg.includes('email not confirmed')) {
+          setErrorMsg('Your email is not confirmed. In Supabase Dashboard, disable "Confirm email" (Authentication > Providers > Email) to allow immediate access.');
+        } else if (msg.includes('invalid login credentials')) {
+          setErrorMsg('Invalid email or password. If you recently attempted to sign up while the email rate limit was exceeded, please sign up again.');
+        } else {
+          setErrorMsg(error.message);
+        }
         return;
       }
 
