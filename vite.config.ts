@@ -200,13 +200,11 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         injectRegister: 'script',
         includeAssets: [
-          'favicon.png',
+          'favicon.svg',
           'apple-touch-icon.png',
           'pwa-192x192.png',
           'pwa-512x512.png',
           'maskable-icon-512x512.png',
-          'terratern-logo.png',
-          'terratern-emblem.png',
         ],
         manifest: {
           name: 'SpeechAI',

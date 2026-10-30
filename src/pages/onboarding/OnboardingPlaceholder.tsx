@@ -42,11 +42,11 @@ export const OnboardingPlaceholder: React.FC = () => {
       {/* Top Header */}
       <div className="flex items-center justify-between max-w-lg mx-auto w-full pt-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-white border border-slate-200/90 flex items-center justify-center p-0.5 overflow-hidden">
-            <img src="/terratern-emblem.png" alt="TerraTern Mascot" className="w-full h-full object-contain" />
+          <div className="w-8 h-8 rounded-lg bg-[#00215C] text-white flex items-center justify-center font-bold text-sm">
+            DE
           </div>
           <span className="font-heading font-extrabold text-lg text-[#00215C]">
-            Terra<span className="text-[#255CC1]">Tern</span>
+            Speech<span className="text-[#255CC1]">AI</span>
           </span>
         </div>
         <button

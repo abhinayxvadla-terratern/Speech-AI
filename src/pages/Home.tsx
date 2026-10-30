@@ -14,7 +14,8 @@ import {
   TrendingDown, 
   Compass, 
   Briefcase, 
-  Loader2
+  Loader2,
+  Mic
 } from 'lucide-react';
 
 export const Home: React.FC = () => {
@@ -205,10 +206,10 @@ export const Home: React.FC = () => {
   if (isNewUser) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center max-w-md mx-auto px-4 py-8 animate-fadeIn text-[#111111]">
-        {/* Executive Voice Training Mascot Badge */}
+        {/* Executive Voice Training Icon Badge */}
         <div className="relative mb-6">
-          <div className="w-24 h-24 rounded-3xl bg-white border border-slate-200/90 flex items-center justify-center p-3 shadow-sm overflow-hidden">
-            <img src="/terratern-emblem.png" alt="TerraTern Mascot" className="w-full h-full object-contain" />
+          <div className="w-20 h-20 rounded-2xl bg-[#EBF2FF] border border-blue-100 flex items-center justify-center text-[#255CC1] shadow-xs">
+            <Mic className="w-9 h-9" />
           </div>
           <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00215C] text-white shadow-xs">
             DE

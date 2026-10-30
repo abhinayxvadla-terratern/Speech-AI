@@ -44,21 +44,21 @@ export const AppShell: React.FC = () => {
       {/* Desktop Sidebar (hidden on mobile, visible md+) */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200/90 min-h-screen sticky top-0 shrink-0 select-none z-30">
         {/* App Brand Header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center p-1 shadow-2xs shrink-0 overflow-hidden">
-              <img src="/terratern-emblem.png" alt="TerraTern Mascot" className="w-full h-full object-contain" />
+            <div className="w-10 h-10 rounded-xl bg-[#00215C] flex items-center justify-center text-white shadow-xs">
+              <Mic className="w-5 h-5 text-blue-200" />
             </div>
-            <div className="min-w-0">
+            <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-heading font-extrabold text-lg text-[#00215C] tracking-tight leading-none">
-                  Terra<span className="text-[#255CC1]">Tern</span>
-                </span>
+                <h1 className="font-heading font-extrabold text-xl text-[#00215C] tracking-tight leading-none">
+                  Speech<span className="text-[#255CC1]">AI</span>
+                </h1>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
-                  SpeechAI
+                  DE
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-1 truncate">German Voice Training</p>
+              <p className="text-[11px] text-slate-500 font-medium mt-1">German Voice Training</p>
             </div>
           </div>
         </div>
@@ -125,15 +125,15 @@ export const AppShell: React.FC = () => {
       {/* Mobile Top App Header */}
       <header className="md:hidden sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 py-3 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center p-0.5 shadow-2xs shrink-0 overflow-hidden">
-            <img src="/terratern-emblem.png" alt="TerraTern Mascot" className="w-full h-full object-contain" />
+          <div className="w-8 h-8 rounded-xl bg-[#00215C] flex items-center justify-center text-white shadow-xs">
+            <Mic className="w-4 h-4 text-blue-200" />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="font-heading font-extrabold text-base text-[#00215C] tracking-tight leading-none">
-              Terra<span className="text-[#255CC1]">Tern</span>
-            </span>
+            <h1 className="font-heading font-extrabold text-lg text-[#00215C] tracking-tight leading-none">
+              Speech<span className="text-[#255CC1]">AI</span>
+            </h1>
             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
-              SpeechAI
+              {profile?.cefr_level || 'DE'}
             </span>
           </div>
         </div>

@@ -251,15 +251,11 @@ export const SessionDetail: React.FC = () => {
                 return (
                   <div key={tIdx} className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}>
                     <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden ${
-                        isUser ? 'bg-[#00215C] text-white shadow-2xs' : 'bg-white border border-slate-200/90 p-0.5 shadow-2xs'
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                        isUser ? 'bg-[#00215C] text-white shadow-2xs' : 'bg-[#255CC1] text-white shadow-2xs'
                       }`}
                     >
-                      {isUser ? (
-                        'You'
-                      ) : (
-                        <img src="/terratern-emblem.png" alt="Mascot" className="w-full h-full object-contain" />
-                      )}
+                      {isUser ? 'You' : 'DE'}
                     </div>
                     <div
                       className={`max-w-[85%] p-3.5 rounded-2xl text-xs leading-relaxed ${

@@ -16,7 +16,8 @@ import {
   Calendar as CalendarIcon, 
   Clock, 
   Loader2,
-  Info
+  Info,
+  Mic
 } from 'lucide-react';
 
 interface CefrOption {
@@ -313,10 +314,10 @@ export const OnboardingFlow: React.FC = () => {
         {/* ================= STEP 1: WELCOME & EXECUTIVE BRANDING ================= */}
         {currentStep === 1 && (
           <div className="flex flex-col items-center text-center animate-fadeIn py-2">
-            {/* Executive Voice Training Mascot Badge */}
+            {/* Executive Voice Training Icon Badge */}
             <div className="relative mb-6">
-              <div className="w-24 h-24 rounded-3xl bg-white border border-slate-200/90 flex items-center justify-center p-3 shadow-sm overflow-hidden">
-                <img src="/terratern-emblem.png" alt="TerraTern Mascot" className="w-full h-full object-contain" />
+              <div className="w-20 h-20 rounded-2xl bg-[#EBF2FF] border border-blue-100 flex items-center justify-center text-[#255CC1] shadow-xs">
+                <Mic className="w-9 h-9" />
               </div>
               <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00215C] text-white shadow-xs">
                 DE
@@ -326,7 +327,7 @@ export const OnboardingFlow: React.FC = () => {
             {/* Platform Introduction */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EBF2FF] text-[#255CC1] text-xs font-semibold mb-3">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>TerraTern • German Voice Coach</span>
+              <span>SpeechAI • German Voice Coach</span>
             </div>
 
             <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight max-w-md leading-tight">

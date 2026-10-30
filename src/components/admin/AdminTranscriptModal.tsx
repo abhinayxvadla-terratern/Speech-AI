@@ -140,10 +140,7 @@ export const AdminTranscriptModal: React.FC<AdminTranscriptModalProps> = ({
                       className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                     >
                       <div className="flex items-center gap-1.5 mb-1 px-1 text-[10px] text-slate-400 font-medium">
-                        <span className={`font-bold flex items-center gap-1 ${isUser ? 'text-[#00215C]' : 'text-[#255CC1]'}`}>
-                          {!isUser && (
-                            <img src="/terratern-emblem.png" alt="Mascot" className="w-3.5 h-3.5 object-contain inline-block" />
-                          )}
+                        <span className={`font-bold ${isUser ? 'text-[#00215C]' : 'text-[#255CC1]'}`}>
                           {isUser ? 'Learner' : 'Coach / AI'}
                         </span>
                         {turn.timestamp && <span>• {turn.timestamp}</span>}

@@ -460,17 +460,13 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
               <div key={idx} className="space-y-2 animate-fadeIn">
                 <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
                   <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 shadow-xs overflow-hidden ${
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${
                       isUser
                         ? 'bg-[#00215C] text-white'
-                        : 'bg-white border border-slate-200/90 p-0.5'
+                        : 'bg-[#255CC1] text-white'
                     }`}
                   >
-                    {isUser ? (
-                      'You'
-                    ) : (
-                      <img src="/terratern-emblem.png" alt="Coach Mascot" className="w-full h-full object-contain" />
-                    )}
+                    {isUser ? 'You' : 'DE'}
                   </div>
 
                   <div

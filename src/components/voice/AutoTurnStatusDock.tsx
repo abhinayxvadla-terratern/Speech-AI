@@ -39,9 +39,6 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
         {isAgentSpeaking && (
           <div className="flex items-center justify-between w-full animate-fadeIn">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white border border-slate-200/90 flex items-center justify-center p-0.5 shrink-0 overflow-hidden shadow-2xs">
-                <img src="/terratern-emblem.png" alt="Mascot" className="w-full h-full object-contain" />
-              </div>
               <div className="flex items-center gap-1">
                 <span className="w-1 h-3.5 bg-[#255CC1] rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
                 <span className="w-1 h-5 bg-[#255CC1] rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />

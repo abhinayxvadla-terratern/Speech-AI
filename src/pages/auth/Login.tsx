@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Mic, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -61,16 +61,12 @@ export const Login: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#FAFBFF] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 text-[#111111]">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        {/* Brand Logo */}
-        <div className="flex items-center justify-center mb-3">
-          <img
-            src="/terratern-logo.png"
-            alt="TerraTern"
-            className="h-16 w-auto object-contain mx-auto"
-          />
+        {/* Brand Icon */}
+        <div className="w-14 h-14 rounded-2xl bg-[#00215C] text-white flex items-center justify-center mx-auto shadow-md">
+          <Mic className="w-7 h-7 text-[#255CC1]" />
         </div>
 
-        <h1 className="mt-2 font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
+        <h1 className="mt-4 font-heading font-extrabold text-3xl text-[#00215C] tracking-tight">
           Speech<span className="text-[#255CC1]">AI</span>
         </h1>
         <p className="mt-1 text-sm text-slate-500 font-normal">
