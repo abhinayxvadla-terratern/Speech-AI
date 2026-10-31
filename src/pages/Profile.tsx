@@ -24,8 +24,11 @@ import {
   X,
   Check,
   MessageSquarePlus,
+  Smartphone,
 } from 'lucide-react';
 import { FeedbackModal } from '../components/feedback/FeedbackModal';
+import { usePwaInstall } from '../hooks/usePwaInstall';
+import { PWAInstallInstructionsModal } from '../components/pwa/PWAInstallInstructionsModal';
 
 type LevelStatus = 'completed' | 'current' | 'not_tracked' | 'locked';
 
@@ -47,6 +50,7 @@ const CEFR_INDEX: Record<string, number> = {
 export const Profile: React.FC = () => {
   const { user, profile, refreshProfile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { isInstalled, installApp, showInstructionsModal, setShowInstructionsModal } = usePwaInstall();
 
   // Streak & Progress Data
   const [streak, setStreak] = useState<Streak | null>(null);
@@ -668,6 +672,36 @@ export const Profile: React.FC = () => {
                 </button>
               </div>
 
+              {/* Desktop & Mobile App Installation */}
+              <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#255CC1] flex items-center justify-center shrink-0">
+                    <Smartphone className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-800 block">Desktop & Mobile App</span>
+                    <span className="text-[11px] text-slate-400">
+                      {isInstalled ? 'Installed as standalone app' : 'Install for 1-click access and distraction-free training'}
+                    </span>
+                  </div>
+                </div>
+
+                {isInstalled ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Installed</span>
+                  </span>
+                ) : (
+                  <button
+                    onClick={installApp}
+                    className="px-3 py-1.5 rounded-lg bg-[#00215C] hover:bg-[#143471] text-white font-semibold text-[11px] transition-colors shrink-0 shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>Install App</span>
+                  </button>
+                )}
+              </div>
+
               {/* Send Feedback Support Channel */}
               <div className="flex items-center justify-between py-2 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
@@ -926,6 +960,12 @@ export const Profile: React.FC = () => {
       <FeedbackModal
         isOpen={feedbackModalOpen}
         onClose={() => setFeedbackModalOpen(false)}
+      />
+
+      {/* MODAL: PWA INSTALL INSTRUCTIONS */}
+      <PWAInstallInstructionsModal
+        isOpen={showInstructionsModal}
+        onClose={() => setShowInstructionsModal(false)}
       />
     </div>
   );

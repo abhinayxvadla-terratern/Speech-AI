@@ -716,6 +716,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           onActionButtonClick={onCompleted}
           sessionId={dbSessionId}
           isRepeatedMistakePause={isRepeatedMistakePause}
+          userTurnsCount={turns.filter(t => t.speaker === 'user').length}
         />
       )}
     </div>

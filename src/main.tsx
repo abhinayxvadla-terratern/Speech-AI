@@ -2,23 +2,40 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { registerSW } from 'virtual:pwa-register';
 
-// Deregister any legacy service workers and clear stale caches
-if (typeof window !== 'undefined') {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      for (const registration of registrations) {
-        registration.unregister().catch(() => {});
+// Register modern PWA service worker with immediate auto-update
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  const updateSW = registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      console.log('[PWA] New version available, reloading to apply updates...');
+      updateSW(true);
+    },
+    onOfflineReady() {
+      console.log('[PWA] App ready for offline use.');
+    },
+    onRegistered(registration) {
+      if (registration) {
+        // Periodically poll for new deployments every 10 minutes
+        setInterval(() => {
+          registration.update().catch(() => {});
+        }, 10 * 60 * 1000);
       }
-    }).catch(() => {});
-  }
-  if ('caches' in window) {
-    caches.keys().then((names) => {
-      for (const name of names) {
-        caches.delete(name).catch(() => {});
-      }
-    }).catch(() => {});
-  }
+    },
+    onRegisterError(error) {
+      console.warn('[PWA] Service worker registration error:', error);
+    },
+  });
+
+  // When user returns to tab, actively check for app updates
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        reg?.update().catch(() => {});
+      }).catch(() => {});
+    }
+  });
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(

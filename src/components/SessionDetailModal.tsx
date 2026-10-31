@@ -14,6 +14,9 @@ interface SessionDetailModalProps {
   onActionButtonClick: () => void;
   sessionId?: string | null;
   isRepeatedMistakePause?: boolean;
+  phrasesCompleted?: number;
+  totalPhrases?: number;
+  userTurnsCount?: number;
 }
 
 export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
@@ -26,6 +29,9 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
   onActionButtonClick,
   sessionId = null,
   isRepeatedMistakePause = false,
+  phrasesCompleted,
+  totalPhrases,
+  userTurnsCount,
 }) => {
   const [feedbackOpen, setFeedbackOpen] = useState<boolean>(false);
 
@@ -33,6 +39,28 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
 
   const isPractice = mode === 'practice';
   const hasGermanRecap = isPractice && Boolean(recap.summary_text_de);
+
+  // Star rating calculation: ensure premature finish or 0 phrases attempted is never awarded 5 stars
+  const isEarlyOrIncomplete =
+    (totalPhrases !== undefined && phrasesCompleted !== undefined && phrasesCompleted < totalPhrases) ||
+    (userTurnsCount !== undefined && userTurnsCount === 0);
+
+  const mistakeCount = recap.mistakes ? recap.mistakes.length : 0;
+  const earnedStars = isEarlyOrIncomplete
+    ? 1
+    : mistakeCount === 0
+    ? 5
+    : mistakeCount === 1
+    ? 4
+    : mistakeCount <= 3
+    ? 3
+    : 2;
+
+  const starLabel = isEarlyOrIncomplete
+    ? '1 / 5 Stars • Workout Incomplete'
+    : earnedStars === 5
+    ? '5 / 5 Stars • Flawless Workout!'
+    : `${earnedStars} / 5 Stars • Good Effort!`;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -68,23 +96,19 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
           {!isRepeatedMistakePause && (
             <div className="mt-3 py-2 px-4 rounded-xl bg-amber-50/70 border border-amber-200/60 inline-flex flex-col items-center gap-1 mx-auto shadow-2xs">
               <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => {
-                  const mistakeCount = recap.mistakes ? recap.mistakes.length : 0;
-                  const earned = mistakeCount === 0 ? 5 : mistakeCount === 1 ? 4 : mistakeCount === 2 ? 3 : 2;
-                  return (
-                    <Star
-                      key={star}
-                      className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                        star <= earned
-                          ? 'fill-amber-400 text-amber-400 drop-shadow-xs'
-                          : 'text-slate-200 fill-slate-100'
-                      }`}
-                    />
-                  );
-                })}
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                      star <= earnedStars
+                        ? 'fill-amber-400 text-amber-400 drop-shadow-xs'
+                        : 'text-slate-200 fill-slate-100'
+                    }`}
+                  />
+                ))}
               </div>
               <span className="text-[11px] font-bold text-amber-900 tracking-wide">
-                {recap.mistakes?.length === 0 ? '5 / 5 Stars • Flawless Workout!' : `${Math.max(2, 5 - (recap.mistakes?.length || 0))} / 5 Stars • Good Effort!`}
+                {starLabel}
               </span>
             </div>
           )}

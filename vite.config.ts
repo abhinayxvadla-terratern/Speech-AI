@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import fs from 'fs';
 
@@ -204,8 +205,35 @@ export default defineConfig(({ mode }) => {
       edgeTtsDevPlugin(),
       vadDevPlugin(),
       serverApiDevPlugin(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        injectRegister: 'auto',
+        workbox: {
+          cleanupOutdatedCaches: true,
+          skipWaiting: true,
+          clientsClaim: true,
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/api\//],
+          runtimeCaching: [
+            {
+              urlPattern: /^\/vad-assets\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'vad-assets-cache',
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+              },
+            },
+          ],
+        },
+        manifest: false,
+      }),
     ],
     define: {
+      '__APP_BUILD_TIME__': JSON.stringify(new Date().toISOString()),
       'process.env.GROQ_API_KEY': JSON.stringify(env.GROQ_API_KEY || env.VITE_GROQ_API_KEY || ''),
       'process.env.OPENROUTER_API_KEY': JSON.stringify(env.OPENROUTER_API_KEY || env.VITE_OPENROUTER_API_KEY || ''),
       'process.env.ADMIN_ENCRYPTION_KEY': JSON.stringify(env.ADMIN_ENCRYPTION_KEY || ''),

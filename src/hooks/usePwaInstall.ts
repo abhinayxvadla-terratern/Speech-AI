@@ -1,7 +1,31 @@
 import { useState, useEffect } from 'react';
 
+declare global {
+  interface Window {
+    __speechAiDeferredPrompt?: any;
+  }
+}
+
+// Global listener to capture beforeinstallprompt early as soon as the module loads
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
+    e.preventDefault();
+    window.__speechAiDeferredPrompt = e;
+  });
+  window.addEventListener('appinstalled', () => {
+    localStorage.setItem('speechai_app_installed', 'true');
+    window.__speechAiDeferredPrompt = null;
+  });
+}
+
 export function usePwaInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      return window.__speechAiDeferredPrompt || null;
+    }
+    return null;
+  });
+
   const [isInstalled, setIsInstalled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return (
@@ -29,14 +53,20 @@ export function usePwaInstall() {
 
     checkStandalone();
 
+    if (window.__speechAiDeferredPrompt) {
+      setDeferredPrompt(window.__speechAiDeferredPrompt);
+    }
+
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      window.__speechAiDeferredPrompt = e;
       setDeferredPrompt(e);
       setIsInstalled(false);
     };
 
     const handleAppInstalled = () => {
       localStorage.setItem('speechai_app_installed', 'true');
+      window.__speechAiDeferredPrompt = null;
       setIsInstalled(true);
       setDeferredPrompt(null);
     };
@@ -51,10 +81,11 @@ export function usePwaInstall() {
   }, []);
 
   const installApp = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
+    const promptEvent = deferredPrompt || window.__speechAiDeferredPrompt;
+    if (promptEvent) {
+      promptEvent.prompt();
       try {
-        const choice = await deferredPrompt.userChoice;
+        const choice = await promptEvent.userChoice;
         if (choice.outcome === 'accepted') {
           localStorage.setItem('speechai_app_installed', 'true');
           setIsInstalled(true);
@@ -62,6 +93,7 @@ export function usePwaInstall() {
       } catch (err) {
         console.warn('Install prompt error:', err);
       }
+      window.__speechAiDeferredPrompt = null;
       setDeferredPrompt(null);
     } else {
       setShowInstructionsModal(true);

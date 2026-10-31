@@ -9,6 +9,7 @@ import { AdminRoleRoute } from './routes/AdminRoleRoute';
 import { AppShell } from './components/layout/AppShell';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { initUtmCapture } from './services/utmTrackingService';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 const UtmCaptureTracker: React.FC = () => {
   const location = useLocation();
@@ -51,7 +52,8 @@ export const App: React.FC = () => {
       <AuthProvider>
         <AdminAuthProvider>
           <ActiveSessionProvider>
-            <Routes>
+            <ErrorBoundary>
+              <Routes>
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
@@ -110,7 +112,8 @@ export const App: React.FC = () => {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </ActiveSessionProvider>
+        </ErrorBoundary>
+      </ActiveSessionProvider>
       </AdminAuthProvider>
     </AuthProvider>
     </BrowserRouter>

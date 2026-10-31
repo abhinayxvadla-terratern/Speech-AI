@@ -28,6 +28,7 @@ export function useAutoTurnVAD({
 
   const vadManagerRef = useRef<VadManager | null>(null);
   const isSendingAudioRef = useRef(false);
+  const [isSendingAudio, setIsSendingAudio] = useState(false);
   const latestWavBlobRef = useRef<Blob | null>(null);
 
   // Audio capture & analysis refs
@@ -250,6 +251,7 @@ export function useAutoTurnVAD({
         latestWavBlobRef.current = wavBlob;
         setIsUserSpeaking(false);
         isSendingAudioRef.current = true;
+        setIsSendingAudio(true);
 
         if (recognitionRef.current) {
           try {
@@ -265,6 +267,7 @@ export function useAutoTurnVAD({
           console.error('[useAutoTurnVAD] Error delivering speech audio:', err);
         } finally {
           isSendingAudioRef.current = false;
+          setIsSendingAudio(false);
           setInterimTranscript('');
           latestTranscriptRef.current = '';
         }
@@ -327,13 +330,13 @@ export function useAutoTurnVAD({
     const vad = vadManagerRef.current;
     if (!vad || !isVadInitialized || isManualPaused) return;
 
-    if (voiceState === 'speaking' || voiceState === 'processing') {
+    if (voiceState === 'speaking' || voiceState === 'processing' || isSendingAudio) {
       vad.stopListening();
       setIsUserSpeaking(false);
-    } else if (voiceState === 'idle' && !isSendingAudioRef.current) {
+    } else if (voiceState === 'idle' && !isSendingAudio) {
       vad.startListening();
     }
-  }, [voiceState, isVadInitialized, isManualPaused]);
+  }, [voiceState, isVadInitialized, isManualPaused, isSendingAudio]);
 
   // ---------------------------------------------------------------------------
   // 6. User Actions (Manual toggle pause, start speaking, submit)

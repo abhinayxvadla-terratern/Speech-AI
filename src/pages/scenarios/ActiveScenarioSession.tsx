@@ -654,7 +654,7 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
                     </div>
 
                     {/* Visually Distinct Element 2: Correction (shown only when a genuine mistake exists) */}
-                    {(!turn.isCorrect && turn.correction && turn.correction.trim().toLowerCase() !== (turn.rawTranscript || turn.text).trim().toLowerCase()) && (
+                    {(!turn.isCorrect && turn.correction && (turn.correction || '').trim().toLowerCase() !== ((turn.rawTranscript || turn.text || '')).trim().toLowerCase()) && (
                       <div className="p-2.5 rounded-lg bg-white border border-emerald-100 flex items-start gap-2 shadow-2xs">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">
                           Correction:
@@ -724,6 +724,7 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
           onActionButtonClick={onCompleted}
           sessionId={dbSessionId}
           isRepeatedMistakePause={isRepeatedMistakePause}
+          userTurnsCount={turns.filter(t => t.speaker === 'user').length}
         />
       )}
     </div>

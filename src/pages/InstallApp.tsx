@@ -68,11 +68,6 @@ export const InstallApp: React.FC = () => {
 
           {/* Headline & Description */}
           <div className="space-y-2 relative">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-white border border-white/20 backdrop-blur-xs text-[11px] font-bold uppercase tracking-wider">
-              <Sparkles className="w-3 h-3 text-blue-200" />
-              <span>Progressive Web App</span>
-            </div>
-
             <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-white tracking-tight leading-tight">
               Get SpeechAI App
             </h1>

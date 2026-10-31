@@ -468,7 +468,7 @@ export const Interview: React.FC = () => {
                   onClick={handleResumeSession}
                   className="px-4 py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold transition-colors shadow-xs"
                 >
-                  Resume Session ({isOpenInterviewSelected ? 'PRACTICE' : incompleteSession.mode.toUpperCase()})
+                  Resume Session ({isOpenInterviewSelected ? 'PRACTICE' : (incompleteSession.mode || 'learn').toUpperCase()})
                 </button>
                 <button
                   onClick={() => handleStartFresh(isOpenInterviewSelected ? 'practice' : 'learn')}

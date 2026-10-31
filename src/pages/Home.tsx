@@ -17,7 +17,6 @@ import {
   Loader2,
   Smartphone
 } from 'lucide-react';
-import { AppLogo } from '../components/common/AppLogo';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { PWAInstallInstructionsModal } from '../components/pwa/PWAInstallInstructionsModal';
 
@@ -203,44 +202,10 @@ export const Home: React.FC = () => {
   }
 
   // ==========================================
-  // NEW-USER STATE (total_sessions === 0)
+  // UNIFIED USER STATE (Consistent for all users)
   // ==========================================
   const isNewUser = !streak || streak.total_sessions === 0;
 
-  if (isNewUser) {
-    return (
-      <div className="space-y-6 max-w-md mx-auto px-4 py-8 text-[#111111]">
-        <div className="min-h-[55vh] flex flex-col items-center justify-center text-center animate-fadeIn">
-          {/* Executive Voice Training Icon Badge */}
-          <div className="mb-6 flex justify-center">
-            <AppLogo size="xl" className="drop-shadow-md" />
-          </div>
-
-          <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight leading-tight">
-            Master Professional Spoken German
-          </h1>
-
-          <p className="mt-3 text-sm text-slate-600 font-normal leading-relaxed">
-            Realistic voice simulations tailored to your field — healthcare, Ausbildung, and university study.
-          </p>
-
-          <div className="mt-8 w-full">
-            <Link
-              to={isC1C2 ? '/scenarios' : '/speak'}
-              className="w-full py-3.5 px-6 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white font-bold text-sm sm:text-base inline-flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
-            >
-              <span>Start Practice</span>
-              <ArrowRight className="w-4 h-4 text-blue-200" />
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ==========================================
-  // RETURNING-USER STATE (total_sessions > 0)
-  // ==========================================
   let urgencyRemainingDays: number | null = null;
   if (profile?.urgency_date) {
     const today = new Date();
@@ -257,7 +222,7 @@ export const Home: React.FC = () => {
       <div className="flex items-center justify-between gap-3 pt-1 pb-1">
         <div>
           <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] tracking-tight">
-            Welcome back, {profile?.name?.split(' ')[0] || 'Learner'}
+            Welcome{isNewUser ? '' : ' back'}, {profile?.name?.split(' ')[0] || 'Learner'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
             German Spoken Training • {profile?.primary_domain || 'General Professional'}
@@ -343,17 +308,19 @@ export const Home: React.FC = () => {
         ) : (
           <div className="space-y-2 pt-1">
             <h2 className="font-heading font-extrabold text-2xl sm:text-3xl text-white tracking-tight">
-              Workplace Situational Practice
+              {isNewUser ? "Start Your Spoken German Workout" : "Workplace Situational Practice"}
             </h2>
             <p className="text-xs sm:text-sm text-blue-100/90 max-w-lg leading-relaxed font-normal">
-              Practice specialized conversational German tailored for your professional domain.
+              {isNewUser
+                ? "Interactive voice simulations tailored to your field — speak naturally with instant feedback."
+                : "Practice specialized conversational German tailored for your professional domain."}
             </p>
             <div className="pt-3">
               <Link
-                to="/scenarios"
+                to={isC1C2 ? '/scenarios' : '/speak'}
                 className="py-3 px-6 rounded-xl bg-white hover:bg-blue-50 text-[#00215C] font-extrabold text-xs sm:text-sm inline-flex items-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all group"
               >
-                <span>Start Scenario Practice</span>
+                <span>Start Practice (5 min)</span>
                 <ArrowRight className="w-4 h-4 text-[#255CC1] group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
@@ -511,28 +478,28 @@ export const Home: React.FC = () => {
         </div>
       )}
 
-      {/* 6. MOBILE GET APP BANNER (Only shown on mobile when app is not installed - disappears on install) */}
+      {/* 6. GET APP BANNER (Shown when app is not installed - disappears on install) */}
       {!isInstalled && (
-        <div className="block md:hidden bg-gradient-to-r from-[#00215C] via-[#052d75] to-[#0a3a96] rounded-2xl p-4 text-white shadow-md border border-blue-900/40 animate-fadeIn">
+        <div className="bg-gradient-to-r from-[#00215C] via-[#052d75] to-[#0a3a96] rounded-2xl p-4 sm:p-5 text-white shadow-md border border-blue-900/40 animate-fadeIn">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0 border border-white/15">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0 border border-white/15 shadow-xs">
                 <Smartphone className="w-5 h-5 text-blue-200" />
               </div>
               <div className="min-w-0">
                 <h4 className="font-heading font-extrabold text-xs sm:text-sm text-white leading-tight">
                   Get SpeechAI App
                 </h4>
-                <p className="text-[11px] text-blue-200/90 leading-tight mt-0.5 truncate font-normal">
-                  Add to Home Screen for fast voice practice
+                <p className="text-[11px] sm:text-xs text-blue-200/90 leading-tight mt-0.5 truncate font-normal">
+                  Install on your computer or mobile device for 1-click voice practice
                 </p>
               </div>
             </div>
             <button
               onClick={installApp}
-              className="px-4 py-2 rounded-xl bg-white hover:bg-blue-50 text-[#00215C] text-xs font-extrabold shrink-0 shadow-xs cursor-pointer active:scale-[0.97] transition-all"
+              className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-white hover:bg-blue-50 text-[#00215C] text-xs font-extrabold shrink-0 shadow-xs cursor-pointer active:scale-[0.97] transition-all flex items-center gap-1.5"
             >
-              Get App
+              <span>Install App</span>
             </button>
           </div>
         </div>
