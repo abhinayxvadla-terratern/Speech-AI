@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Scenario, Session, CefrLevel } from '../lib/database.types';
@@ -15,7 +15,8 @@ import {
   Briefcase, 
   Coffee,
   Info,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 
 import { useKillSwitch } from '../hooks/useKillSwitch';
@@ -79,6 +80,8 @@ function getScenarioSentences(sc: Scenario): string[] {
 const ScenariosInner: React.FC = () => {
   const { user, profile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
   const { disabledTabs } = useKillSwitch();
 
   if (Array.isArray(disabledTabs) && disabledTabs.includes('scenarios')) {
@@ -91,7 +94,7 @@ const ScenariosInner: React.FC = () => {
 
   // Tab & View State
   const [activeTab, setActiveTab] = useState<ScenariosTrackTab>('all');
-  const [view, setView] = useState<ScenariosView>('list');
+  const [view, setView] = useState<ScenariosView>(id ? 'detail' : 'list');
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<number | 'open'>(5);
   const [selectedMode, setSelectedMode] = useState<'learn' | 'practice'>('learn');
@@ -102,15 +105,21 @@ const ScenariosInner: React.FC = () => {
   const [allDomainScenarios, setAllDomainScenarios] = useState<Scenario[]>([]);
   const [dailyScenarios, setDailyScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
 
   // Incomplete session for selected scenario
   const [incompleteSession, setIncompleteSession] = useState<Session | null>(null);
+
+  // Dynamic route scenario fetch state
+  const [scenarioRouteLoading, setScenarioRouteLoading] = useState<boolean>(Boolean(id));
+  const [scenarioRouteError, setScenarioRouteError] = useState<string | null>(null);
 
   // Load scenarios from Supabase
   const loadScenarios = async () => {
     if (!user) return;
     try {
       setLoading(true);
+      setCatalogError(null);
 
       // 1. Fetch Daily Life Scenarios
       const { data: dailyData, error: dailyErr } = await supabase
@@ -173,8 +182,9 @@ const ScenariosInner: React.FC = () => {
       }
 
       setDomainScenarios(matchedDomainScenarios);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading scenarios:', err);
+      setCatalogError(err?.message || 'Unable to load situational scenarios.');
     } finally {
       setLoading(false);
     }
@@ -183,6 +193,97 @@ const ScenariosInner: React.FC = () => {
   useEffect(() => {
     loadScenarios();
   }, [user, primaryDomain, primarySubbranch]);
+
+  // Sync route param :id with scenario details
+  useEffect(() => {
+    if (!id) {
+      // If at /scenarios without an ID param and currently in detail view, return to list
+      if (view === 'detail') {
+        setView('list');
+        setSelectedScenario(null);
+        setIncompleteSession(null);
+        setScenarioRouteError(null);
+      }
+      setScenarioRouteLoading(false);
+      return;
+    }
+
+    // Already have this scenario loaded in state
+    if (selectedScenario && selectedScenario.id === id) {
+      if (view !== 'session') {
+        setView('detail');
+      }
+      setScenarioRouteLoading(false);
+      return;
+    }
+
+    // Check if in already loaded memory lists
+    const inMemory = 
+      allDomainScenarios.find((s) => s.id === id) ||
+      domainScenarios.find((s) => s.id === id) ||
+      dailyScenarios.find((s) => s.id === id);
+
+    if (inMemory) {
+      console.log(`[Scenarios] Found scenario "${inMemory.title}" (ID: ${id}) in catalog.`);
+      setSelectedScenario(inMemory);
+      checkIncompleteSession(inMemory);
+      setScenarioRouteError(null);
+      setScenarioRouteLoading(false);
+      if (view !== 'session') {
+        setView('detail');
+      }
+      return;
+    }
+
+    // Otherwise query Supabase specifically for this scenario ID
+    let isCancelled = false;
+    const fetchScenarioById = async () => {
+      try {
+        setScenarioRouteLoading(true);
+        setScenarioRouteError(null);
+        console.log(`[Scenarios] Querying Supabase for scenario ID: "${id}"`);
+
+        const { data, error } = await supabase
+          .from('scenarios')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (isCancelled) return;
+
+        if (error) {
+          console.error('[Scenarios] Query failed for scenario ID:', id, error);
+          setScenarioRouteError(error.message || 'Failed to load scenario details.');
+        } else if (!data) {
+          console.warn('[Scenarios] Query returned no row for scenario ID:', id);
+          setScenarioRouteError(`Scenario "${id}" could not be found.`);
+        } else {
+          console.log(`[Scenarios] Loaded scenario "${data.title}" (ID: ${id})`);
+          const sc = data as Scenario;
+          setSelectedScenario(sc);
+          checkIncompleteSession(sc);
+          if (view !== 'session') {
+            setView('detail');
+          }
+        }
+      } catch (err: any) {
+        if (!isCancelled) {
+          console.error('[Scenarios] Unexpected error loading scenario:', err);
+          setScenarioRouteError(err?.message || 'Unexpected error loading scenario.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setScenarioRouteLoading(false);
+        }
+      }
+    };
+
+    fetchScenarioById();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [id, allDomainScenarios, domainScenarios, dailyScenarios]);
 
   // Check for incomplete session when selecting a scenario
   const checkIncompleteSession = async (sc: Scenario) => {
@@ -212,6 +313,15 @@ const ScenariosInner: React.FC = () => {
     setSelectedScenario(sc);
     checkIncompleteSession(sc);
     setView('detail');
+    navigate(`/scenarios/${sc.id}`);
+  };
+
+  const handleBackToList = () => {
+    setView('list');
+    setSelectedScenario(null);
+    setIncompleteSession(null);
+    setScenarioRouteError(null);
+    navigate('/scenarios');
   };
 
   const handleStartFresh = async (mode: 'learn' | 'practice') => {
@@ -259,14 +369,52 @@ const ScenariosInner: React.FC = () => {
         onBack={() => {
           setView('detail');
           checkIncompleteSession(selectedScenario);
+          navigate(`/scenarios/${selectedScenario.id}`);
         }}
         onCompleted={() => {
           setView('list');
           setSelectedScenario(null);
           setIncompleteSession(null);
+          navigate('/scenarios');
           loadScenarios();
         }}
       />
+    );
+  }
+
+  // Dynamic Route Loading Guard
+  if (id && scenarioRouteLoading && !selectedScenario) {
+    return (
+      <div className="py-24 text-center text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin text-[#255CC1] mx-auto mb-2" />
+        <p className="text-xs font-medium">Loading German scenario details...</p>
+      </div>
+    );
+  }
+
+  // Dynamic Route Error / Empty State Guard
+  if (id && (scenarioRouteError || (!selectedScenario && !scenarioRouteLoading))) {
+    return (
+      <div className="max-w-xl mx-auto py-16 px-4 text-center space-y-4 animate-fadeIn text-[#111111]">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+          <AlertCircle className="w-7 h-7" />
+        </div>
+        <h2 className="font-heading font-extrabold text-xl text-[#00215C]">
+          Scenario Not Found
+        </h2>
+        <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed font-normal">
+          {scenarioRouteError || `The requested scenario "${id}" was not found or could not be loaded.`}
+        </p>
+        <div className="pt-2">
+          <button
+            onClick={handleBackToList}
+            className="px-5 py-2.5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shadow-xs active:scale-95"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Scenarios</span>
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -286,12 +434,8 @@ const ScenariosInner: React.FC = () => {
         {/* Back Button & Continuity Domain Badge */}
         <div className="flex items-center justify-between">
           <button
-            onClick={() => {
-              setView('list');
-              setSelectedScenario(null);
-              setIncompleteSession(null);
-            }}
-            className="p-2 -ml-2 rounded-xl text-slate-600 hover:text-[#00215C] hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+            onClick={handleBackToList}
+            className="p-2 -ml-2 rounded-xl text-slate-600 hover:text-[#00215C] hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Scenarios</span>
@@ -760,6 +904,22 @@ const ScenariosInner: React.FC = () => {
         <div className="py-16 text-center text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin text-[#255CC1] mx-auto mb-2" />
           <p className="text-xs font-medium">Loading German situational scenarios...</p>
+        </div>
+      ) : catalogError && currentList.length === 0 ? (
+        <div className="p-6 rounded-2xl bg-amber-50/80 border border-amber-200 text-center space-y-3 animate-fadeIn">
+          <AlertCircle className="w-8 h-8 text-amber-600 mx-auto" />
+          <h4 className="font-heading font-bold text-sm text-amber-900">
+            Unable to load scenarios
+          </h4>
+          <p className="text-xs text-amber-700 max-w-sm mx-auto leading-relaxed">
+            {catalogError}
+          </p>
+          <button
+            onClick={loadScenarios}
+            className="px-4 py-2 rounded-xl bg-[#00215C] text-white text-xs font-semibold hover:bg-[#143471] transition-all cursor-pointer shadow-xs"
+          >
+            Retry Loading
+          </button>
         </div>
       ) : activeTab === 'domain' && !primaryDomain ? (
         <div className="space-y-4">

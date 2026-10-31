@@ -77,6 +77,7 @@ export const App: React.FC = () => {
                 <Route path="/home" element={<Navigate to="/" replace />} />
                 <Route path="/speak" element={<Speak />} />
                 <Route path="/scenarios" element={<Scenarios />} />
+                <Route path="/scenarios/:id" element={<Scenarios />} />
                 <Route path="/interview" element={<Interview />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/session/:id" element={<SessionDetail />} />
