@@ -52,3 +52,41 @@ export const getFallbackScenarioPhrases = (title: string): ScenarioPhrase[] => {
     { german: 'Vielen Dank für Ihre Hilfe und Unterstützung!', english: 'Thank you very much for your help and support!' },
   ];
 };
+
+export const getFallbackScenarioSentences = (title: string): string[] => {
+  const lower = (title || '').toLowerCase();
+  if (lower.includes('café') || lower.includes('food') || lower.includes('restaurant') || lower.includes('ordering')) {
+    return [
+      'Zusammen oder getrennt? — Bitte zusammen abrechnen.',
+      'Vielen Dank, das Wechselgeld stimmt so; schönen Tag noch!'
+    ];
+  }
+  if (lower.includes('direction') || lower.includes('weg') || lower.includes('bahnhof') || lower.includes('street') || lower.includes('asking')) {
+    return [
+      'Gehen Sie geradeaus bis zur Ampel und dann biegen Sie links ab.',
+      'Die Haltestelle befindet sich direkt gegenüber der Post.'
+    ];
+  }
+  if (lower.includes('grocer') || lower.includes('einkauf') || lower.includes('supermarkt') || lower.includes('shopping')) {
+    return [
+      'Brauchen Sie den Kassenbon? — Nein danke, nicht nötig.',
+      'Zahlen Sie bar oder mit Karte? — Mit Karte bitte.'
+    ];
+  }
+  if (lower.includes('neighbor') || lower.includes('nachbar') || lower.includes('small talk')) {
+    return [
+      'Vielen Dank für die Nachbarschaftshilfe, das schätze ich sehr.',
+      'Kommen Sie gut durch die Woche und bis zum nächsten Mal!'
+    ];
+  }
+  if (lower.includes('doctor') || lower.includes('arzt') || lower.includes('appointment') || lower.includes('termin')) {
+    return [
+      'Bringen Sie bitte Ihre elektronische Gesundheitskarte mit.',
+      'Kommen Sie bitte morgen früh um 8 Uhr zur offenen Sprechstunde.'
+    ];
+  }
+  return [
+    'Ich helfe Ihnen gerne dabei weiter; lassen Sie uns die Details Schritt für Schritt durchgehen.',
+    'Vielen Dank für das angenehme und produktive Gespräch!'
+  ];
+};

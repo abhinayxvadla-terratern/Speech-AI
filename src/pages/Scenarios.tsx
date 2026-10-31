@@ -20,7 +20,7 @@ import {
 
 import { useKillSwitch } from '../hooks/useKillSwitch';
 import { TabUnavailableBanner } from '../components/layout/TabUnavailableBanner';
-import { getFallbackScenarioPhrases } from '../constants/scenarioFallbacks';
+import { getFallbackScenarioPhrases, getFallbackScenarioSentences } from '../constants/scenarioFallbacks';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 
 type ScenariosTrackTab = 'all' | 'domain' | 'daily_life';
@@ -34,6 +34,47 @@ const CEFR_ORDER: Record<CefrLevel, number> = {
   C1: 5,
   C2: 6,
 };
+
+function getScenarioPhrases(sc: Scenario): Array<{ german: string; english: string }> {
+  let raw: any[] = [];
+  if (typeof sc?.content === 'string') {
+    try {
+      const parsed = JSON.parse(sc.content);
+      if (Array.isArray(parsed?.target_phrases)) raw = parsed.target_phrases;
+    } catch {}
+  } else if (Array.isArray((sc?.content as any)?.target_phrases)) {
+    raw = (sc.content as any).target_phrases;
+  }
+
+  if (!raw || raw.length === 0) {
+    raw = getFallbackScenarioPhrases(sc?.title || '');
+  }
+
+  return (raw || [])
+    .map((p: any) => {
+      if (typeof p === 'string') return { german: p, english: '' };
+      return { german: p?.german || '', english: p?.english || '' };
+    })
+    .filter((p: any) => Boolean(p.german));
+}
+
+function getScenarioSentences(sc: Scenario): string[] {
+  let raw: any[] = [];
+  if (typeof sc?.content === 'string') {
+    try {
+      const parsed = JSON.parse(sc.content);
+      if (Array.isArray(parsed?.example_sentences)) raw = parsed.example_sentences;
+    } catch {}
+  } else if (Array.isArray((sc?.content as any)?.example_sentences)) {
+    raw = (sc.content as any).example_sentences;
+  }
+
+  if (!raw || raw.length === 0) {
+    raw = getFallbackScenarioSentences(sc?.title || '');
+  }
+
+  return (raw || []).filter((s: any) => typeof s === 'string' && s.trim().length > 0);
+}
 
 const ScenariosInner: React.FC = () => {
   const { user, profile } = useAuth();
@@ -103,25 +144,33 @@ const ScenariosInner: React.FC = () => {
       const allDomainList = (allDomainData as Scenario[]) || [];
       setAllDomainScenarios(allDomainList);
 
-      // Filter in memory for primary + added domains
-      const allActiveDomains: { domain: string; subbranch: string }[] = [];
-      if (primaryDomain && primarySubbranch) {
-        allActiveDomains.push({ domain: primaryDomain, subbranch: primarySubbranch });
-      }
-      if (Array.isArray(addedDomains)) {
-        addedDomains.forEach((ad) => {
-          if (ad && typeof ad === 'object' && ad.domain) {
-            allActiveDomains.push({ domain: ad.domain, subbranch: ad.subbranch || '' });
-          }
-        });
-      }
+      // Match domain scenarios: include all scenarios matching the primary domain or added domains
+      let matchedDomainScenarios = allDomainList;
+      if (primaryDomain) {
+        const activeDomains = new Set<string>([primaryDomain]);
+        if (Array.isArray(addedDomains)) {
+          addedDomains.forEach((ad) => {
+            if (ad && typeof ad === 'object' && ad.domain) {
+              activeDomains.add(ad.domain);
+            }
+          });
+        }
 
-      const matchedDomainScenarios = (allDomainList || []).filter((sc) => {
-        if (!sc) return false;
-        return allActiveDomains.some(
-          (ad) => ad.domain === sc.parent_domain && (!sc.sub_branch || ad.subbranch === sc.sub_branch)
-        );
-      });
+        matchedDomainScenarios = (allDomainList || []).filter((sc) => {
+          if (!sc || !sc.parent_domain) return false;
+          return activeDomains.has(sc.parent_domain);
+        });
+
+        // Prioritize exact subbranch match first, then level
+        if (primarySubbranch) {
+          matchedDomainScenarios.sort((a, b) => {
+            const aMatch = a.sub_branch === primarySubbranch ? 0 : 1;
+            const bMatch = b.sub_branch === primarySubbranch ? 0 : 1;
+            if (aMatch !== bMatch) return aMatch - bMatch;
+            return ((a.min_level && CEFR_ORDER[a.min_level]) || 1) - ((b.min_level && CEFR_ORDER[b.min_level]) || 1);
+          });
+        }
+      }
 
       setDomainScenarios(matchedDomainScenarios);
     } catch (err) {
@@ -332,6 +381,32 @@ const ScenariosInner: React.FC = () => {
             );
           })()}
 
+          {/* Real-World Conversation Example / Interlocutor Dialogue */}
+          {(() => {
+            const sentences = getScenarioSentences(selectedScenario);
+            if (!sentences || sentences.length === 0) return null;
+
+            return (
+              <div className="p-4 sm:p-5 rounded-2xl bg-blue-50/60 border border-blue-100 space-y-3">
+                <h4 className="text-xs font-bold text-[#00215C] uppercase tracking-wider flex items-center gap-1.5">
+                  <Coffee className="w-3.5 h-3.5 text-[#255CC1]" />
+                  <span>Real-World Dialogue Context & Exchange ({sentences.length})</span>
+                </h4>
+                <div className="space-y-2">
+                  {sentences.map((sent, sIdx) => (
+                    <div
+                      key={sIdx}
+                      className="p-3.5 rounded-xl bg-white border border-blue-200/60 text-xs text-slate-700 leading-relaxed font-normal flex items-start gap-2.5 shadow-2xs"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#255CC1] shrink-0 mt-1.5" />
+                      <span className="font-medium text-[#00215C]">{sent}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* MODE SELECTOR */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
@@ -489,11 +564,9 @@ const ScenariosInner: React.FC = () => {
   // SCENARIOS LIST VIEW (DEFAULT)
   // ==========================================
   const combinedAllScenarios = React.useMemo(() => {
-    const careerPool = Array.isArray(domainScenarios) && domainScenarios.length > 0 
-      ? domainScenarios 
-      : (Array.isArray(allDomainScenarios) ? allDomainScenarios : []);
     const map = new Map<string, Scenario>();
-    (careerPool || []).forEach((sc) => {
+    const pool = (allDomainScenarios && allDomainScenarios.length > 0) ? allDomainScenarios : domainScenarios;
+    (pool || []).forEach((sc) => {
       if (sc && sc.id) map.set(sc.id, sc);
     });
     (dailyScenarios || []).forEach((sc) => {
@@ -508,7 +581,7 @@ const ScenariosInner: React.FC = () => {
     activeTab === 'all'
       ? combinedAllScenarios
       : activeTab === 'domain'
-      ? (domainScenarios || [])
+      ? (domainScenarios && domainScenarios.length > 0 ? domainScenarios : allDomainScenarios)
       : (dailyScenarios || []);
 
   const baselineScenarios = (dailyScenarios || []).filter((sc) => Boolean(sc?.is_baseline));
@@ -518,22 +591,30 @@ const ScenariosInner: React.FC = () => {
     if (!sc || !sc.id) return null;
     const isDomain = sc.track === 'domain';
     const scLevel = sc.min_level || 'B1';
+    const isTailoredSubbranch = Boolean(primarySubbranch && sc.sub_branch === primarySubbranch);
+    const phrases = getScenarioPhrases(sc);
+    const previewPhrase = phrases[0] || null;
+
     return (
       <div
         key={sc.id}
         onClick={() => handleSelectScenario(sc)}
-        className="p-5 rounded-2xl border border-slate-200/80 hover:border-[#255CC1]/50 bg-white shadow-xs hover:shadow-md transition-all cursor-pointer select-none active:scale-[0.99] flex flex-col justify-between group"
+        className="p-5 rounded-2xl border border-slate-200/80 hover:border-[#255CC1]/60 bg-white shadow-xs hover:shadow-md transition-all cursor-pointer select-none active:scale-[0.99] flex flex-col justify-between group"
       >
-        <div>
-          <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        <div className="space-y-3">
+          {/* Top Level & Domain/Subbranch Badges */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
                 Level {scLevel}
               </span>
+
               {isDomain ? (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#00215C] border border-blue-200/60 flex items-center gap-1">
                   <Briefcase className="w-2.5 h-2.5 text-[#255CC1]" />
-                  <span>{sc.parent_domain || 'Career'}</span>
+                  <span>
+                    {sc.parent_domain}{sc.sub_branch ? ` · ${sc.sub_branch}` : ''}
+                  </span>
                 </span>
               ) : (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60 flex items-center gap-1">
@@ -543,26 +624,68 @@ const ScenariosInner: React.FC = () => {
               )}
             </div>
 
-            {isEssential && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#255CC1] border border-blue-200 flex items-center gap-1">
-                <Sparkles className="w-2.5 h-2.5 text-[#255CC1]" />
-                Essential
-              </span>
-            )}
+            <div className="flex items-center gap-1">
+              {isTailoredSubbranch && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5 text-emerald-500" />
+                  Your Field
+                </span>
+              )}
+              {isEssential && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#255CC1] border border-blue-200 flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5 text-[#255CC1]" />
+                  Essential
+                </span>
+              )}
+            </div>
           </div>
 
-          <h3 className="font-heading font-semibold text-base sm:text-lg text-[#00215C] group-hover:text-[#255CC1] transition-colors leading-snug">
-            {sc.title || 'Scenario'}
-          </h3>
+          {/* Scenario Title & Description */}
+          <div>
+            <h3 className="font-heading font-bold text-base sm:text-lg text-[#00215C] group-hover:text-[#255CC1] transition-colors leading-snug">
+              {sc.title || 'Scenario'}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed font-normal line-clamp-2">
+              {sc.description || ''}
+            </p>
+          </div>
 
-          <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed font-normal line-clamp-2">
-            {sc.description || ''}
-          </p>
+          {/* Key Spoken Phrase Content Preview */}
+          {previewPhrase && (
+            <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-1">
+              <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="flex items-center gap-1 text-[#255CC1]">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Key Spoken Phrase</span>
+                </span>
+                <span className="text-slate-400 font-semibold lowercase">
+                  {phrases.length} phrases in scenario
+                </span>
+              </div>
+              <p className="text-xs font-bold text-[#00215C] leading-snug line-clamp-1">
+                &ldquo;{previewPhrase.german}&rdquo;
+              </p>
+              {previewPhrase.english && (
+                <p className="text-[11px] text-slate-500 font-normal italic line-clamp-1">
+                  &ldquo;{previewPhrase.english}&rdquo;
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center justify-end mt-4 pt-3 border-t border-slate-100 text-slate-400 group-hover:text-[#255CC1] transition-colors text-xs font-semibold gap-1">
-          <span>Start scenario</span>
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+        {/* Card Footer */}
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 text-xs">
+          <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
+            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-semibold">
+              Learn & Practice
+            </span>
+          </div>
+
+          <div className="flex items-center text-slate-400 group-hover:text-[#255CC1] transition-colors font-semibold gap-1">
+            <span>Start scenario</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
         </div>
       </div>
     );
@@ -657,28 +780,39 @@ const ScenariosInner: React.FC = () => {
           <p className="text-xs font-medium">Loading German situational scenarios...</p>
         </div>
       ) : activeTab === 'domain' && !primaryDomain ? (
-        <div className="py-12 px-6 rounded-2xl bg-white border border-slate-200/80 text-center shadow-xs">
-          <div className="w-12 h-12 rounded-xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center mx-auto mb-3 border border-blue-100">
-            <Info className="w-6 h-6" />
+        <div className="space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center shrink-0 border border-blue-100">
+                <Briefcase className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-heading font-bold text-sm text-[#00215C]">
+                  All Career Specializations ({allDomainScenarios.length})
+                </h4>
+                <p className="text-xs text-slate-500 font-normal mt-0.5">
+                  Select your primary domain in Profile to highlight scenarios tailored to your specific profession.
+                </p>
+              </div>
+            </div>
           </div>
-          <h3 className="font-heading font-bold text-base text-[#00215C]">
-            No Career Domain Selected
-          </h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 leading-relaxed">
-            Set your career domain in Profile to access specialized scenarios.
-          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5">
+            {allDomainScenarios.map((sc) => renderScenarioCard(sc, false))}
+          </div>
         </div>
       ) : currentList.length === 0 ? (
-        <div className="py-12 px-6 rounded-2xl bg-white border border-dashed border-slate-200 text-center shadow-xs">
-          <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center mx-auto mb-3">
-            <Compass className="w-6 h-6" />
+        <div className="space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs text-center">
+            <h4 className="font-heading font-bold text-sm text-[#00215C]">
+              Exploring Career Scenarios ({allDomainScenarios.length})
+            </h4>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 leading-relaxed">
+              Explore professional dialogues across all vocational fields:
+            </p>
           </div>
-          <h3 className="font-heading font-bold text-base text-[#00215C]">
-            Scenarios in Development
-          </h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 leading-relaxed">
-            Specialized scenarios for <strong>{primaryDomain} ({primarySubbranch})</strong> are in development. Try Daily Life & Civic for everyday practice.
-          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5">
+            {allDomainScenarios.map((sc) => renderScenarioCard(sc, false))}
+          </div>
         </div>
       ) : (
         /* Scenarios View: All, Career, or Daily Life */
