@@ -21,6 +21,7 @@ import {
 import { useKillSwitch } from '../hooks/useKillSwitch';
 import { TabUnavailableBanner } from '../components/layout/TabUnavailableBanner';
 import { getFallbackScenarioPhrases } from '../constants/scenarioFallbacks';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 
 type ScenariosTrackTab = 'all' | 'domain' | 'daily_life';
 type ScenariosView = 'list' | 'detail' | 'session';
@@ -34,18 +35,18 @@ const CEFR_ORDER: Record<CefrLevel, number> = {
   C2: 6,
 };
 
-export const Scenarios: React.FC = () => {
+const ScenariosInner: React.FC = () => {
   const { user, profile } = useAuth();
   const location = useLocation();
   const { disabledTabs } = useKillSwitch();
 
-  if (disabledTabs.includes('scenarios')) {
+  if (Array.isArray(disabledTabs) && disabledTabs.includes('scenarios')) {
     return <TabUnavailableBanner title="Scenarios Module Temporarily Unavailable" />;
   }
   const userLevel = (profile?.cefr_level as CefrLevel) || 'B1';
   const primaryDomain = profile?.primary_domain;
   const primarySubbranch = profile?.primary_subbranch;
-  const addedDomains = profile?.added_domains || [];
+  const addedDomains = Array.isArray(profile?.added_domains) ? profile.added_domains : [];
 
   // Tab & View State
   const [activeTab, setActiveTab] = useState<ScenariosTrackTab>('all');
@@ -107,13 +108,18 @@ export const Scenarios: React.FC = () => {
       if (primaryDomain && primarySubbranch) {
         allActiveDomains.push({ domain: primaryDomain, subbranch: primarySubbranch });
       }
-      addedDomains.forEach((ad) => {
-        allActiveDomains.push({ domain: ad.domain, subbranch: ad.subbranch });
-      });
+      if (Array.isArray(addedDomains)) {
+        addedDomains.forEach((ad) => {
+          if (ad && typeof ad === 'object' && ad.domain) {
+            allActiveDomains.push({ domain: ad.domain, subbranch: ad.subbranch || '' });
+          }
+        });
+      }
 
-      const matchedDomainScenarios = allDomainList.filter((sc) => {
+      const matchedDomainScenarios = (allDomainList || []).filter((sc) => {
+        if (!sc) return false;
         return allActiveDomains.some(
-          (ad) => ad.domain === sc.parent_domain && ad.subbranch === sc.sub_branch
+          (ad) => ad.domain === sc.parent_domain && (!sc.sub_branch || ad.subbranch === sc.sub_branch)
         );
       });
 
@@ -185,7 +191,8 @@ export const Scenarios: React.FC = () => {
     setView('session');
   };
 
-  const isHigherThanUser = (minLevel: CefrLevel): boolean => {
+  const isHigherThanUser = (minLevel?: CefrLevel): boolean => {
+    if (!minLevel) return false;
     return (CEFR_ORDER[minLevel] || 1) > (CEFR_ORDER[userLevel] || 1);
   };
 
@@ -277,9 +284,19 @@ export const Scenarios: React.FC = () => {
 
           {/* Target Key Phrases */}
           {(() => {
-            const rawPhrases = (selectedScenario.content as any)?.target_phrases?.length > 0
-              ? (selectedScenario.content as any).target_phrases
-              : getFallbackScenarioPhrases(selectedScenario.title);
+            let rawPhrases: any[] = [];
+            if (typeof selectedScenario?.content === 'string') {
+              try {
+                const parsed = JSON.parse(selectedScenario.content);
+                if (Array.isArray(parsed?.target_phrases)) rawPhrases = parsed.target_phrases;
+              } catch {}
+            } else if (Array.isArray((selectedScenario?.content as any)?.target_phrases)) {
+              rawPhrases = (selectedScenario.content as any).target_phrases;
+            }
+
+            if (!rawPhrases || rawPhrases.length === 0) {
+              rawPhrases = getFallbackScenarioPhrases(selectedScenario?.title || '');
+            }
 
             if (!rawPhrases || !Array.isArray(rawPhrases) || rawPhrases.length === 0) return null;
 
@@ -472,12 +489,18 @@ export const Scenarios: React.FC = () => {
   // SCENARIOS LIST VIEW (DEFAULT)
   // ==========================================
   const combinedAllScenarios = React.useMemo(() => {
-    const careerPool = domainScenarios.length > 0 ? domainScenarios : allDomainScenarios;
+    const careerPool = Array.isArray(domainScenarios) && domainScenarios.length > 0 
+      ? domainScenarios 
+      : (Array.isArray(allDomainScenarios) ? allDomainScenarios : []);
     const map = new Map<string, Scenario>();
-    careerPool.forEach((sc) => map.set(sc.id, sc));
-    dailyScenarios.forEach((sc) => map.set(sc.id, sc));
+    (careerPool || []).forEach((sc) => {
+      if (sc && sc.id) map.set(sc.id, sc);
+    });
+    (dailyScenarios || []).forEach((sc) => {
+      if (sc && sc.id) map.set(sc.id, sc);
+    });
     return Array.from(map.values()).sort(
-      (a, b) => (CEFR_ORDER[a.min_level] || 1) - (CEFR_ORDER[b.min_level] || 1)
+      (a, b) => ((a?.min_level && CEFR_ORDER[a.min_level]) || 1) - ((b?.min_level && CEFR_ORDER[b.min_level]) || 1)
     );
   }, [domainScenarios, allDomainScenarios, dailyScenarios]);
 
@@ -485,14 +508,16 @@ export const Scenarios: React.FC = () => {
     activeTab === 'all'
       ? combinedAllScenarios
       : activeTab === 'domain'
-      ? domainScenarios
-      : dailyScenarios;
+      ? (domainScenarios || [])
+      : (dailyScenarios || []);
 
-  const baselineScenarios = dailyScenarios.filter((sc) => sc.is_baseline);
-  const regularDailyScenarios = dailyScenarios.filter((sc) => !sc.is_baseline);
+  const baselineScenarios = (dailyScenarios || []).filter((sc) => Boolean(sc?.is_baseline));
+  const regularDailyScenarios = (dailyScenarios || []).filter((sc) => sc && !sc.is_baseline);
 
   const renderScenarioCard = (sc: Scenario, isEssential: boolean = false) => {
+    if (!sc || !sc.id) return null;
     const isDomain = sc.track === 'domain';
+    const scLevel = sc.min_level || 'B1';
     return (
       <div
         key={sc.id}
@@ -503,7 +528,7 @@ export const Scenarios: React.FC = () => {
           <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-100">
-                Level {sc.min_level}
+                Level {scLevel}
               </span>
               {isDomain ? (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#00215C] border border-blue-200/60 flex items-center gap-1">
@@ -527,11 +552,11 @@ export const Scenarios: React.FC = () => {
           </div>
 
           <h3 className="font-heading font-semibold text-base sm:text-lg text-[#00215C] group-hover:text-[#255CC1] transition-colors leading-snug">
-            {sc.title}
+            {sc.title || 'Scenario'}
           </h3>
 
           <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed font-normal line-clamp-2">
-            {sc.description}
+            {sc.description || ''}
           </p>
         </div>
 
@@ -704,5 +729,13 @@ export const Scenarios: React.FC = () => {
         )
       )}
     </div>
+  );
+};
+
+export const Scenarios: React.FC = () => {
+  return (
+    <ErrorBoundary fallbackTitle="Scenarios Unavailable">
+      <ScenariosInner />
+    </ErrorBoundary>
   );
 };

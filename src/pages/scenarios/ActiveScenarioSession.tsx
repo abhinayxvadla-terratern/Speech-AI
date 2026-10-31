@@ -143,19 +143,46 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const contentObj = (scenario.content as any) || {};
   const targetPhrases: Array<{ german: string; english: string }> = useMemo(() => {
-    if (Array.isArray(contentObj.target_phrases) && contentObj.target_phrases.length > 0) {
-      return contentObj.target_phrases;
+    let raw: any[] = [];
+    if (typeof scenario?.content === 'string') {
+      try {
+        const parsed = JSON.parse(scenario.content);
+        if (Array.isArray(parsed?.target_phrases)) raw = parsed.target_phrases;
+      } catch {}
+    } else if (Array.isArray((scenario?.content as any)?.target_phrases)) {
+      raw = (scenario.content as any).target_phrases;
     }
-    return getFallbackScenarioPhrases(scenario.title);
-  }, [contentObj, scenario.title]);
+
+    if (!raw || raw.length === 0) {
+      raw = getFallbackScenarioPhrases(scenario?.title || '');
+    }
+
+    const normalized = (raw || [])
+      .map((p: any) => {
+        if (typeof p === 'string') {
+          return { german: p, english: '' };
+        }
+        return {
+          german: p?.german || '',
+          english: p?.english || '',
+        };
+      })
+      .filter((p: any) => Boolean(p.german));
+
+    return normalized.length > 0
+      ? normalized
+      : [{ german: 'Guten Tag! Ich freue mich auf das Gespräch.', english: 'Hello! I look forward to our conversation.' }];
+  }, [scenario]);
 
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState<number>(0);
   const currentPhraseIndexRef = useRef<number>(0);
   currentPhraseIndexRef.current = currentPhraseIndex;
 
-  const currentPhrase = targetPhrases[currentPhraseIndex] || targetPhrases[0];
+  const currentPhrase =
+    (targetPhrases && targetPhrases[currentPhraseIndex]) ||
+    (targetPhrases && targetPhrases[0]) ||
+    { german: 'Guten Tag!', english: 'Hello!' };
   const primaryTargetPhrase = currentPhrase.german;
 
   // Scroll to bottom when turns update
@@ -513,11 +540,13 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
           {/* Large German Phrase */}
           <div className="py-2 text-center sm:text-left">
             <p className="font-heading font-extrabold text-2xl sm:text-3xl text-[#00215C] leading-tight tracking-tight">
-              &ldquo;{currentPhrase.german}&rdquo;
+              &ldquo;{currentPhrase?.german || ''}&rdquo;
             </p>
-            <p className="text-sm sm:text-base text-slate-600 font-medium italic mt-1.5">
-              &ldquo;{currentPhrase.english}&rdquo;
-            </p>
+            {currentPhrase?.english && (
+              <p className="text-sm sm:text-base text-slate-600 font-medium italic mt-1.5">
+                &ldquo;{currentPhrase.english}&rdquo;
+              </p>
+            )}
           </div>
 
           {/* Latest Feedback for Current Phrase if user has spoken */}

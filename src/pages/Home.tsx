@@ -478,9 +478,9 @@ export const Home: React.FC = () => {
         </div>
       )}
 
-      {/* 6. GET APP BANNER (Shown when app is not installed - disappears on install) */}
+      {/* 6. GET APP BANNER (Mobile only - hidden on desktop since desktop has sidebar Get App card; disappears when installed) */}
       {!isInstalled && (
-        <div className="bg-gradient-to-r from-[#00215C] via-[#052d75] to-[#0a3a96] rounded-2xl p-4 sm:p-5 text-white shadow-md border border-blue-900/40 animate-fadeIn">
+        <div className="md:hidden bg-gradient-to-r from-[#00215C] via-[#052d75] to-[#0a3a96] rounded-2xl p-4 sm:p-5 text-white shadow-md border border-blue-900/40 animate-fadeIn">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0 border border-white/15 shadow-xs">

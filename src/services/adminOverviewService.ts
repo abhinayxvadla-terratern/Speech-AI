@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { FeedbackStatus, UserFeedback } from '../lib/database.types';
-import { DateRangeValue, isDateInRange } from '../components/admin/AdminDateRangeFilter';
 
 export interface AdminOverviewStats {
   new_signups_today: number;
@@ -24,16 +23,6 @@ export interface AdminMistakeCategory {
 export interface AdminSourceCount {
   source: string;
   count: number;
-}
-
-export interface AdminRangeMetrics {
-  total_users_all_time: number;
-  new_users_in_range: number;
-  new_user_percentage: number;
-  existing_users_prior: number;
-  sessions_in_range: number;
-  completed_sessions_in_range: number;
-  signups_by_source_range: AdminSourceCount[];
 }
 
 export interface AdminFeedbackOverviewItem {
@@ -64,80 +53,15 @@ export interface AdminOverviewData {
   top_mistakes: AdminMistakeCategory[];
   signups_by_source_30d: AdminSourceCount[];
   signups_by_source_all: AdminSourceCount[];
-  range_metrics?: AdminRangeMetrics;
   feedback?: AdminFeedbackOverviewData;
 }
 
 /**
- * Helper to compute range metrics across profiles and sessions
+ * Fetches admin overview metrics using the server-side RPC get_admin_overview_stats()
+ * with automatic client-side fallback if the RPC is unavailable.
  */
-function computeRangeMetrics(
-  allProfiles: Array<{ id: string; created_at: string; source?: string | null }>,
-  allSessions: Array<{ id: string; started_at: string; status?: string }>,
-  dateRange: DateRangeValue
-): AdminRangeMetrics {
-  const total_users_all_time = allProfiles.length;
-  const new_users_in_range = allProfiles.filter((p) => isDateInRange(p.created_at, dateRange)).length;
-  const new_user_percentage =
-    total_users_all_time > 0 ? Math.round((new_users_in_range / total_users_all_time) * 100) : 0;
-  const existing_users_prior = total_users_all_time - new_users_in_range;
-
-  const sessions_in_range = allSessions.filter((s) => isDateInRange(s.started_at, dateRange)).length;
-  const completed_sessions_in_range = allSessions.filter(
-    (s) => s.status === 'completed' && isDateInRange(s.started_at, dateRange)
-  ).length;
-
-  const sourceMapRange: Record<string, number> = {};
-  for (const p of allProfiles) {
-    if (isDateInRange(p.created_at, dateRange)) {
-      const src = (p.source as string) || 'direct';
-      sourceMapRange[src] = (sourceMapRange[src] || 0) + 1;
-    }
-  }
-
-  const signups_by_source_range: AdminSourceCount[] = Object.entries(sourceMapRange)
-    .map(([source, count]) => ({ source, count }))
-    .sort((a, b) => b.count - a.count);
-
-  return {
-    total_users_all_time,
-    new_users_in_range,
-    new_user_percentage,
-    existing_users_prior,
-    sessions_in_range,
-    completed_sessions_in_range,
-    signups_by_source_range,
-  };
-}
-
-/**
- * Fetches admin overview metrics with date range comparison metrics.
- */
-export async function fetchAdminOverviewData(
-  dateRange: DateRangeValue = { preset: 'all', startDate: null, endDate: null, label: 'All Time' }
-): Promise<AdminOverviewData> {
-  // Query profiles and sessions for range calculations
-  const [profilesRes, sessionsRes] = await Promise.all([
-    supabase.from('profiles').select('id, created_at, source, onboarding_completed'),
-    supabase.from('sessions').select('id, user_id, started_at, status'),
-  ]);
-
-  const allProfiles = (profilesRes.data || []) as Array<{
-    id: string;
-    created_at: string;
-    source?: string | null;
-    onboarding_completed?: boolean;
-  }>;
-  const allSessions = (sessionsRes.data || []) as Array<{
-    id: string;
-    user_id: string;
-    started_at: string;
-    status: string;
-  }>;
-
-  const range_metrics = computeRangeMetrics(allProfiles, allSessions, dateRange);
-
-  // Strategy 1: Fast server-side RPC for funnel and mistakes
+export async function fetchAdminOverviewData(): Promise<AdminOverviewData> {
+  // Strategy 1: Fast server-side RPC
   try {
     const { data, error } = await supabase.rpc('get_admin_overview_stats');
 
@@ -173,7 +97,6 @@ export async function fetchAdminOverviewData(
                 count: Number(s.count ?? 0),
               }))
             : [],
-          range_metrics,
         };
       }
     }
@@ -187,11 +110,20 @@ export async function fetchAdminOverviewData(
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
+  // 1. Profiles
+  const { data: profiles, error: pErr } = await supabase
+    .from('profiles')
+    .select('id, created_at, onboarding_completed, source');
+
+  if (pErr) throw pErr;
+
+  const allProfiles = profiles || [];
   const signed_up = allProfiles.length;
   const completed_onboarding = allProfiles.filter((p) => p.onboarding_completed).length;
   const new_signups_today = allProfiles.filter((p) => p.created_at >= todayStart).length;
   const new_signups_this_week = allProfiles.filter((p) => p.created_at >= sevenDaysAgo).length;
 
+  // Source aggregations for 30d and all-time
   const sourceMap30d: Record<string, number> = {};
   const sourceMapAll: Record<string, number> = {};
 
@@ -211,9 +143,18 @@ export async function fetchAdminOverviewData(
     .map(([source, count]) => ({ source, count }))
     .sort((a, b) => b.count - a.count);
 
+  // 2. Sessions
+  const { data: sessions, error: sErr } = await supabase
+    .from('sessions')
+    .select('id, user_id, started_at, status');
+
+  if (sErr) throw sErr;
+
+  const allSessions = sessions || [];
   const active_sessions_today = allSessions.filter((s) => s.started_at >= todayStart).length;
   const total_sessions_completed = allSessions.filter((s) => s.status === 'completed').length;
 
+  // Count sessions per user for funnel
   const userSessionCounts: Record<string, number> = {};
   for (const s of allSessions) {
     if (s.user_id) {
@@ -224,8 +165,11 @@ export async function fetchAdminOverviewData(
   const had_first_session = Object.values(userSessionCounts).filter((cnt) => cnt >= 1).length;
   const reached_session_5 = Object.values(userSessionCounts).filter((cnt) => cnt >= 5).length;
 
-  // Mistakes aggregation
-  const { data: recaps, error: rErr } = await supabase.from('diagnostic_recaps').select('mistakes');
+  // 3. Mistakes aggregation
+  const { data: recaps, error: rErr } = await supabase
+    .from('diagnostic_recaps')
+    .select('mistakes');
+
   if (rErr) throw rErr;
 
   const categoryCounts: Record<string, number> = {};
@@ -263,16 +207,13 @@ export async function fetchAdminOverviewData(
     top_mistakes,
     signups_by_source_30d,
     signups_by_source_all,
-    range_metrics,
   };
 }
 
 /**
- * Fetches recent feedback submissions platform-wide with category counts and optional date filtering.
+ * Fetches recent feedback submissions platform-wide with category counts.
  */
-export async function fetchAdminFeedbackOverview(
-  dateRange?: DateRangeValue
-): Promise<AdminFeedbackOverviewData> {
+export async function fetchAdminFeedbackOverview(): Promise<AdminFeedbackOverviewData> {
   const { data: feedbackRows, error } = await supabase
     .from('feedback')
     .select('*')
@@ -290,10 +231,7 @@ export async function fetchAdminFeedbackOverview(
     };
   }
 
-  let rows = (feedbackRows || []) as UserFeedback[];
-  if (dateRange && dateRange.preset !== 'all') {
-    rows = rows.filter((r) => isDateInRange(r.created_at, dateRange));
-  }
+  const rows = (feedbackRows || []) as UserFeedback[];
 
   // Fetch profiles to get user names for display
   const userIds = Array.from(new Set(rows.map((r) => r.user_id)));

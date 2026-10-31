@@ -672,26 +672,21 @@ export const Profile: React.FC = () => {
                 </button>
               </div>
 
-              {/* Desktop & Mobile App Installation */}
-              <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#255CC1] flex items-center justify-center shrink-0">
-                    <Smartphone className="w-4 h-4" />
+              {/* Desktop & Mobile App Installation (Hidden when app is installed) */}
+              {!isInstalled && (
+                <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#255CC1] flex items-center justify-center shrink-0">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-800 block">Desktop & Mobile App</span>
+                      <span className="text-[11px] text-slate-400">
+                        Install for 1-click access and distraction-free training
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-semibold text-slate-800 block">Desktop & Mobile App</span>
-                    <span className="text-[11px] text-slate-400">
-                      {isInstalled ? 'Installed as standalone app' : 'Install for 1-click access and distraction-free training'}
-                    </span>
-                  </div>
-                </div>
 
-                {isInstalled ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-semibold">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Installed</span>
-                  </span>
-                ) : (
                   <button
                     onClick={installApp}
                     className="px-3 py-1.5 rounded-lg bg-[#00215C] hover:bg-[#143471] text-white font-semibold text-[11px] transition-colors shrink-0 shadow-xs cursor-pointer flex items-center gap-1.5"
@@ -699,8 +694,8 @@ export const Profile: React.FC = () => {
                     <Download className="w-3 h-3" />
                     <span>Install App</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Send Feedback Support Channel */}
               <div className="flex items-center justify-between py-2 border-b border-slate-100">

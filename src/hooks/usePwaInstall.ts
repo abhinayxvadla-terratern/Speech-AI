@@ -61,7 +61,17 @@ export function usePwaInstall() {
       e.preventDefault();
       window.__speechAiDeferredPrompt = e;
       setDeferredPrompt(e);
-      setIsInstalled(false);
+
+      // Do NOT revert isInstalled to false if already installed / standalone
+      const alreadyInstalled =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true ||
+        document.referrer.includes('android-app://') ||
+        localStorage.getItem('speechai_app_installed') === 'true';
+
+      if (!alreadyInstalled) {
+        setIsInstalled(false);
+      }
     };
 
     const handleAppInstalled = () => {
