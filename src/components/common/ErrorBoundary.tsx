@@ -48,6 +48,14 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-md mx-auto leading-relaxed font-normal">
             An unexpected error occurred while displaying this section. Please reload to restore your practice session.
           </p>
+          {import.meta.env.DEV && this.state.error && (
+            <div className="mt-4 p-3 max-w-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl text-left overflow-auto font-mono max-h-48">
+              <p className="font-bold">{this.state.error.name}: {this.state.error.message}</p>
+              {this.state.error.stack && (
+                <pre className="mt-1 text-[11px] whitespace-pre-wrap">{this.state.error.stack}</pre>
+              )}
+            </div>
+          )}
           <button
             onClick={this.handleReset}
             className="mt-6 px-6 py-2.5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all inline-flex items-center gap-2 cursor-pointer active:scale-95"
