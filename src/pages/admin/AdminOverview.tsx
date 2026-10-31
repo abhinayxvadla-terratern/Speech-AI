@@ -12,7 +12,8 @@ import {
   Globe,
   MessageSquarePlus,
   Clock,
-  Star
+  Star,
+  UserCheck
 } from 'lucide-react';
 import { 
   fetchAdminOverviewData, 
@@ -20,6 +21,10 @@ import {
   AdminOverviewData, 
   AdminFeedbackOverviewData 
 } from '../../services/adminOverviewService';
+import { 
+  AdminDateRangeFilter, 
+  DateRangeValue 
+} from '../../components/admin/AdminDateRangeFilter';
 
 const SOURCE_META: Record<string, { label: string; badge: string; bar: string }> = {
   paid_social: { label: 'Paid Social', badge: 'bg-purple-100 text-purple-800 border-purple-200', bar: 'bg-purple-600' },
@@ -47,28 +52,38 @@ export const AdminOverview: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [sourcePeriod, setSourcePeriod] = useState<'30d' | 'all'>('30d');
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => ({
+    preset: 'all',
+    startDate: null,
+    endDate: null,
+    label: 'All Time',
+  }));
+  const [sourcePeriod, setSourcePeriod] = useState<'range' | '30d' | 'all'>('30d');
 
-  const loadData = useCallback(async (silent = false) => {
-    try {
-      if (!silent) setLoading(true);
-      setIsRefreshing(true);
-      setError(null);
-      const [res, fb] = await Promise.all([
-        fetchAdminOverviewData(),
-        fetchAdminFeedbackOverview(),
-      ]);
-      setData(res);
-      setFeedbackData(fb);
-      setLastUpdated(new Date());
-    } catch (err: any) {
-      console.error('Failed to load admin overview metrics:', err);
-      setError(err?.message || 'Failed to fetch platform metrics');
-    } finally {
-      if (!silent) setLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
+  const loadData = useCallback(
+    async (silent = false, rangeToUse?: DateRangeValue) => {
+      try {
+        if (!silent) setLoading(true);
+        setIsRefreshing(true);
+        setError(null);
+        const activeRange = rangeToUse || dateRange;
+        const [res, fb] = await Promise.all([
+          fetchAdminOverviewData(activeRange),
+          fetchAdminFeedbackOverview(activeRange),
+        ]);
+        setData(res);
+        setFeedbackData(fb);
+        setLastUpdated(new Date());
+      } catch (err: any) {
+        console.error('Failed to load admin overview metrics:', err);
+        setError(err?.message || 'Failed to fetch platform metrics');
+      } finally {
+        if (!silent) setLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [dateRange]
+  );
 
   useEffect(() => {
     loadData(false);
@@ -81,9 +96,20 @@ export const AdminOverview: React.FC = () => {
     return () => clearInterval(timer);
   }, [loadData]);
 
+  const handleDateRangeChange = (newRange: DateRangeValue) => {
+    setDateRange(newRange);
+    if (newRange.preset !== 'all') {
+      setSourcePeriod('range');
+    } else {
+      setSourcePeriod('30d');
+    }
+    loadData(false, newRange);
+  };
+
   const stats = data?.stats;
   const funnel = data?.funnel;
   const mistakes = data?.top_mistakes || [];
+  const rangeMetrics = data?.range_metrics;
 
   // Calculate funnel metrics
   const signedUp = funnel?.signed_up || 0;
@@ -99,29 +125,40 @@ export const AdminOverview: React.FC = () => {
   const totalMistakesCount = mistakes.reduce((acc, m) => acc + m.count, 0);
 
   // Source breakdown based on active period
-  const activeSources = (sourcePeriod === '30d' ? data?.signups_by_source_30d : data?.signups_by_source_all) || [];
+  const activeSources =
+    (sourcePeriod === 'range'
+      ? rangeMetrics?.signups_by_source_range
+      : sourcePeriod === '30d'
+      ? data?.signups_by_source_30d
+      : data?.signups_by_source_all) || [];
   const totalPeriodSignups = activeSources.reduce((acc, s) => acc + s.count, 0);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Top Action & Status Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2">
+      {/* Top Action & Status Bar with Date Range Filter */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-2">
         <div>
           <h2 className="font-heading font-extrabold text-2xl text-[#00215C] tracking-tight">
             Platform Overview
           </h2>
           <p className="text-xs text-slate-500 font-body mt-0.5">
-            Glance-and-done live vitals, user conversion funnel, and platform-wide mistake trends.
+            Glance-and-done live vitals, user conversion funnel, mistake trends, and cohort comparisons.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Global Date Range Filter */}
+          <AdminDateRangeFilter
+            value={dateRange}
+            onChange={handleDateRangeChange}
+          />
+
           <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             Live Sync (20s)
           </div>
           {lastUpdated && (
-            <span className="text-[11px] text-slate-400 font-medium">
+            <span className="text-[11px] text-slate-400 font-medium hidden md:inline">
               Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           )}
@@ -237,6 +274,117 @@ export const AdminOverview: React.FC = () => {
           <p className="mt-2 text-[11px] text-slate-500 font-medium">
             Diagnostic recaps generated
           </p>
+        </div>
+      </div>
+
+      {/* 2. Total Users vs New Users Range Comparison Widget */}
+      <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#00215C] flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-heading font-bold text-sm text-[#00215C] flex items-center gap-2">
+                User Cohort Comparison: Total vs New Registrations
+                {dateRange.preset !== 'all' && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-[#255CC1] border border-blue-200">
+                    {dateRange.label}
+                  </span>
+                )}
+              </h3>
+              <p className="text-[11px] text-slate-500 font-body">
+                Compares overall directory base against new learners registered during the active date range.
+              </p>
+            </div>
+          </div>
+
+          {dateRange.preset !== 'all' && (
+            <button
+              onClick={() => handleDateRangeChange({ preset: 'all', startDate: null, endDate: null, label: 'All Time' })}
+              className="text-xs font-semibold text-slate-500 hover:text-[#255CC1] transition-colors"
+            >
+              Reset to All Time
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-4">
+          {/* Total Users (All-Time) */}
+          <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-heading">
+                Total Users (All-Time)
+              </span>
+              <Users className="w-3.5 h-3.5 text-slate-400" />
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-heading font-extrabold text-2xl text-[#00215C]">
+                {loading && !data ? '—' : (rangeMetrics?.total_users_all_time ?? signedUp)}
+              </span>
+              <span className="text-[11px] font-medium text-slate-500">learners</span>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-500">Platform-wide directory base</p>
+          </div>
+
+          {/* New Users in Range */}
+          <div className="p-4 rounded-xl bg-emerald-50/40 border border-emerald-100 hover:bg-emerald-50/60 transition-colors">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 font-heading flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-emerald-500" />
+                New Users in Range
+              </span>
+              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                {rangeMetrics?.new_user_percentage ?? 0}%
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-heading font-extrabold text-2xl text-emerald-700">
+                {loading && !data ? '—' : (rangeMetrics?.new_users_in_range ?? 0)}
+              </span>
+              <span className="text-[11px] font-semibold text-emerald-600">new signups</span>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-500">Registered within {dateRange.label}</p>
+          </div>
+
+          {/* Existing / Prior Users */}
+          <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-heading">
+                Existing / Prior Users
+              </span>
+              <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-heading font-extrabold text-2xl text-[#00215C]">
+                {loading && !data ? '—' : (rangeMetrics?.existing_users_prior ?? 0)}
+              </span>
+              <span className="text-[11px] font-medium text-slate-500">prior learners</span>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-500">Registered prior to this window</p>
+          </div>
+
+          {/* Sessions Started in Range */}
+          <div className="p-4 rounded-xl bg-blue-50/40 border border-blue-100 hover:bg-blue-50/60 transition-colors">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#255CC1] font-heading flex items-center gap-1">
+                <Activity className="w-3 h-3 text-[#255CC1]" />
+                Sessions in Range
+              </span>
+              <span className="text-[10px] font-bold text-slate-400">
+                {rangeMetrics?.completed_sessions_in_range ?? 0} done
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-heading font-extrabold text-2xl text-[#00215C]">
+                {loading && !data ? '—' : (rangeMetrics?.sessions_in_range ?? 0)}
+              </span>
+              <span className="text-[11px] font-medium text-slate-500">started</span>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-500">
+              {rangeMetrics?.completed_sessions_in_range ?? 0} diagnostic recaps generated
+            </p>
+          </div>
         </div>
       </div>
 
@@ -490,8 +638,20 @@ export const AdminOverview: React.FC = () => {
             </div>
           </div>
 
-          {/* 30-Day vs All-Time Toggle */}
+          {/* Period Toggle */}
           <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200/80 text-xs font-semibold">
+            {dateRange.preset !== 'all' && (
+              <button
+                onClick={() => setSourcePeriod('range')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  sourcePeriod === 'range'
+                    ? 'bg-white text-[#00215C] shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-[#00215C]'
+                }`}
+              >
+                {dateRange.label}
+              </button>
+            )}
             <button
               onClick={() => setSourcePeriod('30d')}
               className={`px-3 py-1.5 rounded-lg transition-all ${
@@ -571,7 +731,7 @@ export const AdminOverview: React.FC = () => {
                 Captured on page load across all routes and written to profile on signup
               </span>
               <span className="font-semibold text-[#00215C]">
-                Total {sourcePeriod === '30d' ? '30-Day' : 'All-Time'} Registrations: <strong className="text-sm font-bold text-[#255CC1]">{totalPeriodSignups}</strong>
+                Total {sourcePeriod === 'range' ? dateRange.label : sourcePeriod === '30d' ? '30-Day' : 'All-Time'} Registrations: <strong className="text-sm font-bold text-[#255CC1]">{totalPeriodSignups}</strong>
               </span>
             </div>
           </div>

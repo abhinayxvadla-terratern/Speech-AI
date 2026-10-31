@@ -99,11 +99,13 @@ export async function clearAcknowledgedErrors(adminUserId: string): Promise<void
 // 2. ALL-SESSIONS BROWSER
 // ==========================================
 
+import { DateRangeValue } from '../components/admin/AdminDateRangeFilter';
+
 export interface SessionFilterOptions {
   tab?: string;
   mode?: string;
   status?: string;
-  dateRange?: 'today' | '7days' | '30days' | 'all';
+  dateRange?: 'today' | '7days' | '30days' | 'all' | DateRangeValue;
 }
 
 export async function fetchAllPlatformSessions(options: SessionFilterOptions = {}): Promise<Session[]> {
@@ -126,18 +128,28 @@ export async function fetchAllPlatformSessions(options: SessionFilterOptions = {
   }
 
   if (options.dateRange && options.dateRange !== 'all') {
-    const now = new Date();
-    let cutoff: Date;
-
-    if (options.dateRange === 'today') {
-      cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    } else if (options.dateRange === '7days') {
-      cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    if (typeof options.dateRange === 'object') {
+      const dr = options.dateRange;
+      if (dr.startDate) {
+        query = query.gte('started_at', dr.startDate.toISOString());
+      }
+      if (dr.endDate) {
+        query = query.lte('started_at', dr.endDate.toISOString());
+      }
     } else {
-      cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    }
+      const now = new Date();
+      let cutoff: Date;
 
-    query = query.gte('started_at', cutoff.toISOString());
+      if (options.dateRange === 'today') {
+        cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      } else if (options.dateRange === '7days') {
+        cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      } else {
+        cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      }
+
+      query = query.gte('started_at', cutoff.toISOString());
+    }
   }
 
   const { data, error } = await query;

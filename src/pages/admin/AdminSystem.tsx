@@ -36,6 +36,10 @@ import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { AdminTranscriptModal } from '../../components/admin/AdminTranscriptModal';
 import { AdminTeamRolesSection } from '../../components/admin/AdminTeamRolesSection';
 import { AdminApiKeysSection } from '../../components/admin/AdminApiKeysSection';
+import { 
+  AdminDateRangeFilter, 
+  DateRangeValue 
+} from '../../components/admin/AdminDateRangeFilter';
 
 const PLATFORM_TABS = [
   { id: 'speak', name: 'Speak Tab', desc: 'Audio turn learning & pronunciation drills' },
@@ -77,6 +81,12 @@ export const AdminSystem: React.FC = () => {
 
   // 2. All-Sessions State
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionDateRange, setSessionDateRange] = useState<DateRangeValue>(() => ({
+    preset: 'all',
+    startDate: null,
+    endDate: null,
+    label: 'All Time',
+  }));
   const [sessionFilter, setSessionFilter] = useState<SessionFilterOptions>({
     tab: 'all',
     mode: 'all',
@@ -85,6 +95,14 @@ export const AdminSystem: React.FC = () => {
   });
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [selectedSessionRecap, setSelectedSessionRecap] = useState<DiagnosticRecap | null>(null);
+
+  const handleSessionDateRangeChange = (newRange: DateRangeValue) => {
+    setSessionDateRange(newRange);
+    setSessionFilter((prev) => ({
+      ...prev,
+      dateRange: newRange,
+    }));
+  };
 
   // 3. Platform Configs (Kill-Switches) State
   const [disabledTabs, setDisabledTabs] = useState<string[]>([]);
@@ -671,21 +689,15 @@ export const AdminSystem: React.FC = () => {
           {/* Multi-Dimensional Filter Bar */}
           <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-4 text-xs">
             <div className="flex flex-wrap items-center gap-3">
-              {/* Date Range */}
+              {/* Date Range Filter */}
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
                   DATE RANGE
                 </label>
-                <select
-                  value={sessionFilter.dateRange}
-                  onChange={(e) => setSessionFilter({ ...sessionFilter, dateRange: e.target.value as any })}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-[#FAFBFF] text-xs font-semibold text-[#00215C]"
-                >
-                  <option value="all">All Time</option>
-                  <option value="today">Today Only</option>
-                  <option value="7days">Last 7 Days</option>
-                  <option value="30days">Last 30 Days</option>
-                </select>
+                <AdminDateRangeFilter
+                  value={sessionDateRange}
+                  onChange={handleSessionDateRangeChange}
+                />
               </div>
 
               {/* Tab Filter */}

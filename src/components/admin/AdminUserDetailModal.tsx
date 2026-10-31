@@ -43,6 +43,11 @@ import {
 } from '../../services/adminUserService';
 import { AdminTranscriptModal } from './AdminTranscriptModal';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
+import { 
+  AdminDateRangeFilter, 
+  DateRangeValue, 
+  isDateInRange 
+} from './AdminDateRangeFilter';
 
 interface AdminUserDetailModalProps {
   user: AdminDirectoryUser | null;
@@ -89,6 +94,26 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
   const [sessionTabFilter, setSessionTabFilter] = useState<string>('all');
   const [sessionModeFilter, setSessionModeFilter] = useState<string>('all');
   const [sessionStatusFilter, setSessionStatusFilter] = useState<string>('all');
+  const [sessionDateRange, setSessionDateRange] = useState<DateRangeValue>(() => ({
+    preset: 'all',
+    startDate: null,
+    endDate: null,
+    label: 'All Time',
+  }));
+
+  // Date range filters for recaps & feedback
+  const [recapDateRange, setRecapDateRange] = useState<DateRangeValue>(() => ({
+    preset: 'all',
+    startDate: null,
+    endDate: null,
+    label: 'All Time',
+  }));
+  const [feedbackDateRange, setFeedbackDateRange] = useState<DateRangeValue>(() => ({
+    preset: 'all',
+    startDate: null,
+    endDate: null,
+    label: 'All Time',
+  }));
 
   // Action states
   const [cefrLevel, setCefrLevel] = useState<CefrLevel>(user.cefr_level || 'B1');
@@ -295,13 +320,17 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
     }
   };
 
-  // Filtered Sessions
+  // Filtered Sessions, Recaps & Feedback
   const filteredSessions = sessions.filter((s) => {
     if (sessionTabFilter !== 'all' && s.tab !== sessionTabFilter) return false;
     if (sessionModeFilter !== 'all' && s.mode !== sessionModeFilter) return false;
     if (sessionStatusFilter !== 'all' && s.status !== sessionStatusFilter) return false;
+    if (!isDateInRange(s.started_at, sessionDateRange)) return false;
     return true;
   });
+
+  const filteredRecaps = recaps.filter((r) => isDateInRange(r.created_at, recapDateRange));
+  const filteredFeedbackList = userFeedbackList.filter((fb) => isDateInRange(fb.created_at, feedbackDateRange));
 
   return (
     <>
@@ -634,7 +663,13 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
               <div className="space-y-4">
                 {/* Filter Controls */}
                 <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200 text-xs">
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <AdminDateRangeFilter
+                      value={sessionDateRange}
+                      onChange={setSessionDateRange}
+                      showCustomInputsInline={false}
+                    />
+
                     <div>
                       <label className="text-[10px] font-bold text-slate-400 block mb-0.5">TAB</label>
                       <select
@@ -744,12 +779,26 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
             {/* TAB 3: DIAGNOSTIC RECAPS */}
             {activeTab === 'recaps' && (
               <div className="space-y-4">
-                {recaps.length === 0 ? (
+                {/* Filter Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200 text-xs">
+                  <AdminDateRangeFilter
+                    value={recapDateRange}
+                    onChange={setRecapDateRange}
+                    showCustomInputsInline={false}
+                  />
+                  <span className="text-xs text-slate-400 font-medium">
+                    Showing {filteredRecaps.length} of {recaps.length} diagnostic recaps
+                  </span>
+                </div>
+
+                {filteredRecaps.length === 0 ? (
                   <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs">
-                    No diagnostic recaps generated for this user yet.
+                    {recaps.length === 0
+                      ? 'No diagnostic recaps generated for this user yet.'
+                      : 'No recaps match the selected date filter.'}
                   </div>
                 ) : (
-                  recaps.map((r) => {
+                  filteredRecaps.map((r) => {
                     const mistakesList = Array.isArray(r.mistakes) ? r.mistakes : [];
                     return (
                       <div key={r.id} className="p-5 rounded-2xl bg-white border border-slate-200 space-y-3">
@@ -805,29 +854,40 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
             {/* TAB: FEEDBACK SUBMITTED */}
             {activeTab === 'feedback' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-200">
                   <div className="flex items-center gap-2">
                     <MessageSquarePlus className="w-4 h-4 text-[#255CC1]" />
                     <h4 className="font-heading font-bold text-sm text-[#00215C]">
-                      Feedback & Support Submissions ({userFeedbackList.length})
+                      Feedback & Support Submissions ({filteredFeedbackList.length})
                     </h4>
                   </div>
-                  <span className="text-xs text-slate-400">
-                    Live from in-app support & diagnostic recap flags
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <AdminDateRangeFilter
+                      value={feedbackDateRange}
+                      onChange={setFeedbackDateRange}
+                      showCustomInputsInline={false}
+                    />
+                    <span className="text-xs text-slate-400 hidden sm:inline">
+                      Live from in-app support & diagnostic flags
+                    </span>
+                  </div>
                 </div>
 
-                {userFeedbackList.length === 0 ? (
+                {filteredFeedbackList.length === 0 ? (
                   <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-400">
                     <MessageSquarePlus className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#255CC1]" />
-                    <p className="text-xs font-semibold text-slate-600">No feedback submitted by this user</p>
+                    <p className="text-xs font-semibold text-slate-600">
+                      {userFeedbackList.length === 0
+                        ? 'No feedback submitted by this user'
+                        : 'No feedback matches the selected date filter'}
+                    </p>
                     <p className="text-[11px] mt-1 text-slate-400">
                       Feedback submitted by this user from their profile settings or recap screens will appear here.
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {userFeedbackList.map((item) => {
+                    {filteredFeedbackList.map((item) => {
                       const isUpdating = updatingFeedbackId === item.id;
                       const catBadge =
                         item.category === 'Bug'
