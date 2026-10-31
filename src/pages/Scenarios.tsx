@@ -333,49 +333,31 @@ const ScenariosInner: React.FC = () => {
 
           {/* Target Key Phrases */}
           {(() => {
-            let rawPhrases: any[] = [];
-            if (typeof selectedScenario?.content === 'string') {
-              try {
-                const parsed = JSON.parse(selectedScenario.content);
-                if (Array.isArray(parsed?.target_phrases)) rawPhrases = parsed.target_phrases;
-              } catch {}
-            } else if (Array.isArray((selectedScenario?.content as any)?.target_phrases)) {
-              rawPhrases = (selectedScenario.content as any).target_phrases;
-            }
-
-            if (!rawPhrases || rawPhrases.length === 0) {
-              rawPhrases = getFallbackScenarioPhrases(selectedScenario?.title || '');
-            }
-
-            if (!rawPhrases || !Array.isArray(rawPhrases) || rawPhrases.length === 0) return null;
+            const phrases = getScenarioPhrases(selectedScenario);
+            if (!phrases || phrases.length === 0) return null;
 
             return (
               <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
                 <h4 className="text-xs font-bold text-[#00215C] uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-                  <span>Essential Real-World Phrases ({rawPhrases.length})</span>
+                  <span>Essential Real-World Phrases ({phrases.length})</span>
                 </h4>
                 <div className="space-y-2">
-                  {rawPhrases.map((phrase: any, idx: number) => {
-                    const germanText = typeof phrase === 'string' ? phrase : phrase?.german || '';
-                    const englishText = typeof phrase === 'object' ? phrase?.english || '' : '';
-                    if (!germanText) return null;
-                    return (
-                      <div
-                        key={idx}
-                        className="p-3.5 rounded-xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4 shadow-2xs"
-                      >
-                        <span className="font-bold text-xs sm:text-sm text-[#00215C]">
-                          {germanText}
+                  {phrases.map((phrase, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 rounded-xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4 shadow-2xs"
+                    >
+                      <span className="font-bold text-xs sm:text-sm text-[#00215C]">
+                        {phrase.german}
+                      </span>
+                      {phrase.english && (
+                        <span className="text-xs text-slate-500 font-normal italic">
+                          "{phrase.english}"
                         </span>
-                        {englishText && (
-                          <span className="text-xs text-slate-500 font-normal italic">
-                            "{englishText}"
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             );
@@ -613,7 +595,7 @@ const ScenariosInner: React.FC = () => {
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#00215C] border border-blue-200/60 flex items-center gap-1">
                   <Briefcase className="w-2.5 h-2.5 text-[#255CC1]" />
                   <span>
-                    {sc.parent_domain}{sc.sub_branch ? ` · ${sc.sub_branch}` : ''}
+                    {sc.parent_domain || 'Career'}{sc.sub_branch ? ` · ${sc.sub_branch}` : ''}
                   </span>
                 </span>
               ) : (
@@ -873,3 +855,5 @@ export const Scenarios: React.FC = () => {
     </ErrorBoundary>
   );
 };
+
+export default Scenarios;
