@@ -117,22 +117,33 @@ function serverApiDevPlugin(): Plugin {
     name: 'server-api-dev-server',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if (!req.url?.startsWith('/api/keys') && !req.url?.startsWith('/api/llm') && !req.url?.startsWith('/api/feedback-notify')) {
+        if (
+          !req.url?.startsWith('/api/keys') &&
+          !req.url?.startsWith('/api/llm') &&
+          !req.url?.startsWith('/api/stt') &&
+          !req.url?.startsWith('/api/feedback-notify')
+        ) {
           return next();
         }
 
         try {
-          const body = await new Promise<string>((resolve) => {
-            let acc = '';
-            req.on('data', (c: any) => (acc += c));
-            req.on('end', () => resolve(acc));
+          const chunks: any[] = [];
+          await new Promise<void>((resolve, reject) => {
+            req.on('data', (c: any) => chunks.push(c));
+            req.on('end', () => resolve());
+            req.on('error', (err: any) => reject(err));
           });
 
-          let parsedBody = {};
-          if (body) {
+          const rawBuffer = Buffer.concat(chunks.map((c) => (Buffer.isBuffer(c) ? c : Buffer.from(c))));
+
+          let parsedBody: any = rawBuffer;
+          if (req.url.startsWith('/api/keys') || req.url.startsWith('/api/llm') || req.url.startsWith('/api/feedback-notify')) {
             try {
-              parsedBody = JSON.parse(body);
-            } catch {}
+              const bodyStr = rawBuffer.toString('utf-8');
+              if (bodyStr) parsedBody = JSON.parse(bodyStr);
+            } catch {
+              parsedBody = {};
+            }
           }
 
           const mockReq: any = {
@@ -140,6 +151,7 @@ function serverApiDevPlugin(): Plugin {
             headers: req.headers,
             query: Object.fromEntries(new URL(req.url, 'http://localhost').searchParams),
             body: parsedBody,
+            on: req.on.bind(req),
           };
 
           const mockRes: any = {
@@ -164,6 +176,12 @@ function serverApiDevPlugin(): Plugin {
               this.headersSent = true;
             },
           };
+
+          if (req.url.startsWith('/api/stt')) {
+            const { default: handler } = await import('./api/stt');
+            await handler(mockReq, mockRes);
+            return;
+          }
 
           if (req.url.startsWith('/api/keys')) {
             const { default: handler } = await import('./api/keys');

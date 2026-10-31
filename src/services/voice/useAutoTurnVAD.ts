@@ -376,6 +376,7 @@ export function useAutoTurnVAD({
     }
     setIsUserSpeaking(false);
     isSendingAudioRef.current = true;
+    setIsSendingAudio(true);
 
     try {
       const recordedBlob = await stopRecordingStream();

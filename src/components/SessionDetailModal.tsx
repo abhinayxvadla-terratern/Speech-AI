@@ -40,15 +40,19 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
   const isPractice = mode === 'practice';
   const hasGermanRecap = isPractice && Boolean(recap.summary_text_de);
 
-  // Star rating calculation: ensure premature finish or 0 phrases attempted is never awarded 5 stars
-  const isEarlyOrIncomplete =
-    (totalPhrases !== undefined && phrasesCompleted !== undefined && phrasesCompleted < totalPhrases) ||
-    (userTurnsCount !== undefined && userTurnsCount === 0);
+  // Star rating calculation: ensure premature finish, 0 phrases, or 0 user turns is never awarded 5 stars
+  const isZeroSpeech = userTurnsCount !== undefined ? userTurnsCount === 0 : false;
+  const isIncompleteWorkout =
+    totalPhrases !== undefined && phrasesCompleted !== undefined
+      ? phrasesCompleted < totalPhrases
+      : false;
 
-  const mistakeCount = recap.mistakes ? recap.mistakes.length : 0;
-  const earnedStars = isEarlyOrIncomplete
+  const mistakeCount = Array.isArray(recap.mistakes) ? recap.mistakes.length : 0;
+  const earnedStars = isZeroSpeech
     ? 1
-    : mistakeCount === 0
+    : isIncompleteWorkout
+    ? (mistakeCount === 0 ? 2 : 1)
+    : mistakeCount === 0 && (userTurnsCount ?? 1) > 0
     ? 5
     : mistakeCount === 1
     ? 4
@@ -56,8 +60,10 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
     ? 3
     : 2;
 
-  const starLabel = isEarlyOrIncomplete
-    ? '1 / 5 Stars • Workout Incomplete'
+  const starLabel = isZeroSpeech
+    ? '1 / 5 Stars • No Speech Detected'
+    : isIncompleteWorkout
+    ? `${earnedStars} / 5 Stars • Workout Ended Early`
     : earnedStars === 5
     ? '5 / 5 Stars • Flawless Workout!'
     : `${earnedStars} / 5 Stars • Good Effort!`;

@@ -11,6 +11,7 @@ import { useAutoTurnVAD } from '../../services/voice/useAutoTurnVAD';
 import { AutoTurnStatusDock } from '../../components/voice/AutoTurnStatusDock';
 import { 
   ArrowLeft, 
+  ArrowRight,
   CheckCircle2, 
   Loader2, 
   Volume2, 
@@ -402,6 +403,26 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
     return () => clearTimeout(t);
   }, [errorMsg]);
 
+  // Advance to next phrase manually or programmatically in Learn mode
+  const handleAdvancePhrase = () => {
+    const curIdx = currentPhraseIndexRef.current;
+    if (curIdx < targetPhrases.length - 1) {
+      const nextIdx = curIdx + 1;
+      currentPhraseIndexRef.current = nextIdx;
+      setCurrentPhraseIndex(nextIdx);
+      const nextPhrase = targetPhrases[nextIdx];
+      if (sessionHandle && sessionHandle.context) {
+        sessionHandle.context.targetPhrase = nextPhrase.german;
+      }
+      if (sessionHandle && voiceAdapter.speak) {
+        const nextPrompt = `The next phrase is: "${nextPhrase.german}" — which means "${nextPhrase.english}". Now, say it!`;
+        voiceAdapter.speak(sessionHandle, nextPrompt).catch(console.warn);
+      }
+    } else {
+      handleFinishSession();
+    }
+  };
+
   // Finish session, save diagnostic recap, update streak
   const handleFinishSession = async () => {
     if (!user || isFinishing) return;
@@ -573,6 +594,42 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
               </div>
             );
           })()}
+          {/* Action controls for current phrase */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100/80">
+            <button
+              type="button"
+              onClick={() => {
+                if (sessionHandle && voiceAdapter.speak) {
+                  voiceAdapter.speak(sessionHandle, currentPhrase.german).catch(console.warn);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#255CC1] text-xs font-semibold transition-colors cursor-pointer"
+              title="Listen to German pronunciation"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              <span>Listen Again</span>
+            </button>
+
+            {currentPhraseIndex < targetPhrases.length - 1 ? (
+              <button
+                type="button"
+                onClick={handleAdvancePhrase}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+              >
+                <span>Next Phrase</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleFinishSession}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Finish Simulation</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -753,6 +810,8 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
           onActionButtonClick={onCompleted}
           sessionId={dbSessionId}
           isRepeatedMistakePause={isRepeatedMistakePause}
+          phrasesCompleted={mode === 'learn' ? currentPhraseIndex + (turns.some(t => t.speaker === 'user') ? 1 : 0) : undefined}
+          totalPhrases={mode === 'learn' ? targetPhrases.length : undefined}
           userTurnsCount={turns.filter(t => t.speaker === 'user').length}
         />
       )}

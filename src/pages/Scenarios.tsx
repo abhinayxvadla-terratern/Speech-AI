@@ -22,7 +22,6 @@ import {
 import { useKillSwitch } from '../hooks/useKillSwitch';
 import { TabUnavailableBanner } from '../components/layout/TabUnavailableBanner';
 import { getFallbackScenarioPhrases, getFallbackScenarioSentences } from '../constants/scenarioFallbacks';
-import { ErrorBoundary } from '../components/common/ErrorBoundary';
 
 type ScenariosTrackTab = 'all' | 'domain' | 'daily_life';
 type ScenariosView = 'list' | 'detail' | 'session';
@@ -77,7 +76,7 @@ function getScenarioSentences(sc: Scenario): string[] {
   return (raw || []).filter((s: any) => typeof s === 'string' && s.trim().length > 0);
 }
 
-const ScenariosInner: React.FC = () => {
+export const Scenarios: React.FC = () => {
   const { user, profile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -194,19 +193,9 @@ const ScenariosInner: React.FC = () => {
     loadScenarios();
   }, [user, primaryDomain, primarySubbranch]);
 
-  // Sync route param :id with scenario details
+  // Sync route param :id with scenario details on direct navigation or initial mount
   useEffect(() => {
-    if (!id) {
-      // If at /scenarios without an ID param and currently in detail view, return to list
-      if (view === 'detail') {
-        setView('list');
-        setSelectedScenario(null);
-        setIncompleteSession(null);
-        setScenarioRouteError(null);
-      }
-      setScenarioRouteLoading(false);
-      return;
-    }
+    if (!id) return;
 
     // Already have this scenario loaded in state
     if (selectedScenario && selectedScenario.id === id) {
@@ -224,7 +213,6 @@ const ScenariosInner: React.FC = () => {
       dailyScenarios.find((s) => s.id === id);
 
     if (inMemory) {
-      console.log(`[Scenarios] Found scenario "${inMemory.title}" (ID: ${id}) in catalog.`);
       setSelectedScenario(inMemory);
       checkIncompleteSession(inMemory);
       setScenarioRouteError(null);
@@ -241,7 +229,6 @@ const ScenariosInner: React.FC = () => {
       try {
         setScenarioRouteLoading(true);
         setScenarioRouteError(null);
-        console.log(`[Scenarios] Querying Supabase for scenario ID: "${id}"`);
 
         const { data, error } = await supabase
           .from('scenarios')
@@ -258,7 +245,6 @@ const ScenariosInner: React.FC = () => {
           console.warn('[Scenarios] Query returned no row for scenario ID:', id);
           setScenarioRouteError(`Scenario "${id}" could not be found.`);
         } else {
-          console.log(`[Scenarios] Loaded scenario "${data.title}" (ID: ${id})`);
           const sc = data as Scenario;
           setSelectedScenario(sc);
           checkIncompleteSession(sc);
@@ -313,7 +299,9 @@ const ScenariosInner: React.FC = () => {
     setSelectedScenario(sc);
     checkIncompleteSession(sc);
     setView('detail');
-    navigate(`/scenarios/${sc.id}`);
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      window.history.replaceState(null, '', `/scenarios/${sc.id}`);
+    }
   };
 
   const handleBackToList = () => {
@@ -321,7 +309,9 @@ const ScenariosInner: React.FC = () => {
     setSelectedScenario(null);
     setIncompleteSession(null);
     setScenarioRouteError(null);
-    navigate('/scenarios');
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      window.history.replaceState(null, '', '/scenarios');
+    }
   };
 
   const handleStartFresh = async (mode: 'learn' | 'practice') => {
@@ -1005,14 +995,6 @@ const ScenariosInner: React.FC = () => {
         )
       )}
     </div>
-  );
-};
-
-export const Scenarios: React.FC = () => {
-  return (
-    <ErrorBoundary fallbackTitle="Scenarios Unavailable">
-      <ScenariosInner />
-    </ErrorBoundary>
   );
 };
 

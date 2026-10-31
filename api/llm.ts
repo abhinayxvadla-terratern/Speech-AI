@@ -1,17 +1,16 @@
 import { getProviderApiKeys } from './_keyResolver';
 
 const GROQ_MODELS = [
-  'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
-  'qwen/qwen3.8-27b',
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
 ];
 
 const OPENROUTER_FREE_MODELS = [
-  'nvidia/nemotron-3.5-lightning:free',
-  'nvidia/nemotron-3.5-super-vl:free',
-  'liquid/lfm-2.5-2.6b:free',
-  'google/gemma-4-26b-a4b-it:free',
-  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'meta-llama/llama-3.1-8b-instruct:free',
+  'google/gemma-2-9b-it:free',
+  'mistralai/mistral-7b-instruct:free',
+  'qwen/qwen-2.5-72b-instruct:free',
 ];
 
 function sanitizeJsonString(raw: string): string {

@@ -89,10 +89,7 @@ export class RealVoiceAdapter implements VoiceAdapter {
       (typeof process !== 'undefined' && (process.env?.GROQ_API_KEY || process.env?.VITE_GROQ_API_KEY)) ||
       (typeof import.meta !== 'undefined' && ((import.meta as any).env?.VITE_GROQ_API_KEY || (import.meta as any).env?.GROQ_API_KEY));
 
-    if (!key) {
-      throw new Error('GROQ_API_KEY is not configured. Please verify your .env file or environment variables.');
-    }
-    return key;
+    return key || '';
   }
 
   private getOpenRouterApiKey(): string {
@@ -323,105 +320,91 @@ export class RealVoiceAdapter implements VoiceAdapter {
 
   /**
    * Transcribe audio using Groq Whisper STT (model: whisper-large-v3, language: de).
-   * Supports WAV, WebM, OGG, MP3 and falls back smoothly to client speech recognition if needed.
+   * 1. Primary: Serverless /api/stt endpoint (uses encrypted database keys without client exposure)
+   * 2. Fallback: Direct Groq Whisper API (if client key available)
+   * 3. Fallback: Client Web Speech API transcript
    */
   private async transcribeAudio(
     _session: InternalSessionState,
     audioChunk?: any,
     clientTranscript?: string
   ): Promise<{ transcript: string; confidence: 'high' | 'medium' | 'low' }> {
+    // 1. Try server-side /api/stt endpoint first
+    if (audioChunk && (audioChunk instanceof Blob || audioChunk instanceof File)) {
+      try {
+        const contentType = audioChunk.type || 'audio/wav';
+        const res = await fetch('/api/stt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': contentType,
+          },
+          body: audioChunk,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const transcript = (data.transcript || '').trim();
+          if (transcript) {
+            return { transcript, confidence: data.confidence || 'high' };
+          }
+        } else {
+          const errText = await res.text().catch(() => '');
+          console.warn(`[RealVoiceAdapter] /api/stt HTTP ${res.status}:`, errText);
+        }
+      } catch (sttApiErr) {
+        console.warn('[RealVoiceAdapter] /api/stt route unreachable, attempting direct fallback:', sttApiErr);
+      }
+    }
+
+    // 2. Direct client fallback using Groq API key if available
     const apiKey = this.getApiKey();
-
-    let fileToSend: any;
-
-    if (audioChunk instanceof Blob || audioChunk instanceof File) {
-      if (audioChunk instanceof File) {
-        fileToSend = audioChunk;
-      } else {
+    if (apiKey && (audioChunk instanceof Blob || audioChunk instanceof File)) {
+      try {
         const rawType = audioChunk.type || 'audio/wav';
         let filename = 'recording.wav';
         if (rawType.includes('webm')) filename = 'recording.webm';
         else if (rawType.includes('ogg')) filename = 'recording.ogg';
         else if (rawType.includes('mp4') || rawType.includes('m4a')) filename = 'recording.m4a';
         else if (rawType.includes('mp3') || rawType.includes('mpeg')) filename = 'recording.mp3';
-        fileToSend = new File([audioChunk], filename, { type: rawType });
+
+        const fileToSend = new File([audioChunk], filename, { type: rawType });
+        const form = new FormData();
+        form.append('file', fileToSend);
+        form.append('model', 'whisper-large-v3');
+        form.append('language', 'de');
+        form.append('response_format', 'verbose_json');
+        form.append(
+          'prompt',
+          "This is a language learner's German speech practice attempt. Transcribe exactly what is said, including any mistakes — do not normalize."
+        );
+
+        const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: form,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const transcript = (data.text || '').trim();
+          if (transcript) {
+            return { transcript, confidence: 'high' };
+          }
+        }
+      } catch (directErr) {
+        console.warn('[RealVoiceAdapter] Direct Groq transcription error:', directErr);
       }
-    } else if (typeof Buffer !== 'undefined' && Buffer.isBuffer(audioChunk)) {
-      fileToSend = new File([audioChunk as any], 'recording.mp3', { type: 'audio/mpeg' });
-    } else if (clientTranscript && clientTranscript.trim().length > 0) {
-      return { transcript: clientTranscript.trim(), confidence: 'high' };
-    } else {
-      throw new Error('No audio detected. Please speak into your microphone or tap Speak.');
     }
 
-    if (!fileToSend) {
-      if (clientTranscript && clientTranscript.trim().length > 0) {
-        return { transcript: clientTranscript.trim(), confidence: 'medium' };
-      }
-      throw new Error('Groq Whisper STT failed: No audio data available for transcription.');
+    // 3. Fallback to client Web Speech API transcript if captured
+    if (clientTranscript && clientTranscript.trim().length > 0) {
+      console.log('[RealVoiceAdapter] Using client speech recognition transcript:', clientTranscript);
+      return { transcript: clientTranscript.trim(), confidence: 'medium' };
     }
 
-    const form = new FormData();
-    form.append('file', fileToSend);
-    form.append('model', 'whisper-large-v3');
-    form.append('language', 'de');
-    form.append('response_format', 'verbose_json');
-    form.append(
-      'prompt',
-      "This is a language learner's German speech practice attempt. It may contain grammar errors, wrong word order, incorrect case usage, or mispronunciations. Transcribe exactly what is said, including any mistakes — do not correct, normalize, or autocorrect the German toward what a fluent speaker would have said."
-    );
-
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: form,
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.warn(`[RealVoiceAdapter] Groq Whisper STT API error (HTTP ${res.status}): ${errText}`);
-        if (clientTranscript && clientTranscript.trim().length > 0) {
-          return { transcript: clientTranscript.trim(), confidence: 'medium' };
-        }
-        throw new Error(`Groq Whisper STT API error (HTTP ${res.status}): ${errText}`);
-      }
-
-      const data = await res.json();
-      const transcript = (data.text || '').trim();
-
-      if (!transcript) {
-        if (clientTranscript && clientTranscript.trim().length > 0) {
-          return { transcript: clientTranscript.trim(), confidence: 'medium' };
-        }
-        throw new Error('Groq Whisper STT returned an empty transcription.');
-      }
-
-      // Determine confidence from segment log probabilities if available
-      let confidence: 'high' | 'medium' | 'low' = 'high';
-      if (Array.isArray(data.segments) && data.segments.length > 0) {
-        const avgLogprob =
-          data.segments.reduce((acc: number, s: any) => acc + (typeof s.avg_logprob === 'number' ? s.avg_logprob : 0), 0) /
-          data.segments.length;
-        if (avgLogprob < -0.85) {
-          confidence = 'low';
-        } else if (avgLogprob < -0.5) {
-          confidence = 'medium';
-        } else {
-          confidence = 'high';
-        }
-      }
-
-      return { transcript, confidence };
-    } catch (fetchErr: any) {
-      if (clientTranscript && clientTranscript.trim().length > 0) {
-        console.warn('[RealVoiceAdapter] Groq Whisper network error, falling back to client transcript:', fetchErr);
-        return { transcript: clientTranscript.trim(), confidence: 'medium' };
-      }
-      throw fetchErr;
-    }
+    throw new Error('No clear speech detected. Please speak into your microphone or tap Speak.');
   }
 
   /**
@@ -430,8 +413,8 @@ export class RealVoiceAdapter implements VoiceAdapter {
   private async callGroqLLMWithRetry(messages: Array<{ role: string; content: string }>): Promise<any> {
     const apiKey = this.getApiKey();
 
-    // Primary target model: llama-3.3-70b-versatile. Fallback candidates if 404/decommissioned in this region.
-    const modelsToTry = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'qwen/qwen3.8-27b'];
+    // Primary target model: llama-3.3-70b-versatile. Fallback candidate: llama-3.1-8b-instant.
+    const modelsToTry = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
     let lastError: Error | null = null;
 
@@ -1026,17 +1009,19 @@ Return ONLY valid JSON:
         const replyDe = parsed.reply_de || 'Verstehe, bitte fahren Sie fort.';
         let finalReply = replyDe;
 
-        if (isRecurring && parsed.correction_note_en) {
-          finalReply = `${replyDe}\n\nNote: ${parsed.correction_note_en}`;
+        const hasMistake = isRecurring || newMistakes.length > 0 || Boolean(parsed.correction);
+        if (hasMistake) {
+          const feedbackMsg = parsed.correction_note_en || (newMistakes[0]?.correction_de ? `Try: "${newMistakes[0].correction_de}"` : 'Good effort! Pay attention to pronunciation and case endings.');
+          finalReply = `${replyDe}\n\nNote: ${feedbackMsg}`;
           userTurn.isCorrect = false;
-          userTurn.correction = parsed.correction || newMistakes[0]?.correction_de || null;
-          userTurn.category = parsed.category || newMistakes[0]?.category || null;
-          userTurn.feedback_en = parsed.correction_note_en;
+          userTurn.correction = parsed.correction || newMistakes[0]?.correction_de || newMistakes[0]?.correction || null;
+          userTurn.category = parsed.category || newMistakes[0]?.category || 'Phrase Recitation';
+          userTurn.feedback_en = feedbackMsg;
         } else {
           userTurn.isCorrect = true;
           userTurn.correction = null;
           userTurn.category = null;
-          userTurn.feedback_en = null;
+          userTurn.feedback_en = 'Ausgezeichnet! Natural and accurate recitation.';
         }
 
         if ((isNonEngagement || isObviousOffTopic) && session.strikes > 0 && !finalReply.includes("No worries")) {
