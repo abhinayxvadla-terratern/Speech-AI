@@ -7,10 +7,7 @@ import {
   Calendar, 
   ChevronRight, 
   AlertCircle,
-  Users,
-  UserCheck,
-  Sparkles
-} from 'lucide-react';
+  } from 'lucide-react';
 import { AdminDirectoryUser } from '../../lib/database.types';
 import { fetchAdminUsersDirectory } from '../../services/adminUserService';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -73,7 +70,6 @@ export const AdminUsers: React.FC = () => {
     endDate: null,
     label: 'All Time',
   }));
-  const [cohortFilter, setCohortFilter] = useState<'all' | 'new_only' | 'existing_only'>('all');
 
   // Selected User for Detail View
   const [selectedUser, setSelectedUser] = useState<AdminDirectoryUser | null>(null);
@@ -105,26 +101,14 @@ export const AdminUsers: React.FC = () => {
     return () => clearInterval(timer);
   }, [loadDirectory]);
 
-  // Total vs New Users in Range Analytics
-  const totalUsersCount = users.length;
-  const newUsersInRange = useMemo(() => {
-    return users.filter((u) => isDateInRange(u.created_at, dateRange));
-  }, [users, dateRange]);
-  const newUsersCount = newUsersInRange.length;
-  const existingUsersCount = totalUsersCount - newUsersCount;
-  const newUserPercentage = totalUsersCount > 0 ? Math.round((newUsersCount / totalUsersCount) * 100) : 0;
-
   // Filtered Users List
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
-      // 0. Cohort Filter (All vs New in Range vs Existing Prior)
-      const isNew = isDateInRange(u.created_at, dateRange);
-      if (cohortFilter === 'new_only' && !isNew) {
+      // 0. Date Range Filter
+      if (dateRange.preset !== 'all' && !isDateInRange(u.created_at, dateRange)) {
         return false;
       }
-      if (cohortFilter === 'existing_only' && isNew) {
-        return false;
-      }
+
 
       // 1. Search Query (name or email)
       if (searchQuery.trim()) {
@@ -152,7 +136,7 @@ export const AdminUsers: React.FC = () => {
 
       return true;
     });
-  }, [users, searchQuery, selectedDomain, selectedLevel, selectedSource, cohortFilter, dateRange]);
+  }, [users, searchQuery, selectedDomain, selectedLevel, selectedSource, dateRange]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -199,102 +183,7 @@ export const AdminUsers: React.FC = () => {
         </div>
       )}
 
-      {/* Total Users vs New Users Comparison KPI Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Total Users (All-Time) */}
-        <div
-          onClick={() => setCohortFilter('all')}
-          className={`p-5 rounded-2xl bg-white border cursor-pointer transition-all shadow-2xs hover:border-[#255CC1]/50 ${
-            cohortFilter === 'all'
-              ? 'border-[#255CC1] ring-2 ring-[#255CC1]/15 bg-gradient-to-br from-white to-blue-50/30'
-              : 'border-slate-200'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-heading">
-              Total Users
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#00215C] flex items-center justify-center">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-heading font-extrabold text-3xl text-[#00215C] tracking-tight">
-              {loading && users.length === 0 ? '—' : totalUsersCount}
-            </span>
-            <span className="text-xs font-semibold text-slate-500">all-time learners</span>
-          </div>
-          <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">Directory total</span>
-            <span className={`font-bold ${cohortFilter === 'all' ? 'text-[#255CC1]' : 'text-slate-400'}`}>
-              {cohortFilter === 'all' ? '● Active Filter' : 'Click to view all'}
-            </span>
-          </div>
-        </div>
-
-        {/* New Users in Range */}
-        <div
-          onClick={() => setCohortFilter('new_only')}
-          className={`p-5 rounded-2xl bg-white border cursor-pointer transition-all shadow-2xs hover:border-emerald-500/50 ${
-            cohortFilter === 'new_only'
-              ? 'border-emerald-500 ring-2 ring-emerald-500/15 bg-gradient-to-br from-white to-emerald-50/30'
-              : 'border-slate-200'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 font-heading flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-              New Users ({dateRange.label})
-            </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
-              {newUserPercentage}% of total
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-heading font-extrabold text-3xl text-emerald-700 tracking-tight">
-              {loading && users.length === 0 ? '—' : newUsersCount}
-            </span>
-            <span className="text-xs font-semibold text-emerald-600">new registrations</span>
-          </div>
-          <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">In selected date range</span>
-            <span className={`font-bold ${cohortFilter === 'new_only' ? 'text-emerald-700' : 'text-slate-400'}`}>
-              {cohortFilter === 'new_only' ? '● Showing New Only' : 'Click to isolate'}
-            </span>
-          </div>
-        </div>
-
-        {/* Existing / Prior Users */}
-        <div
-          onClick={() => setCohortFilter('existing_only')}
-          className={`p-5 rounded-2xl bg-white border cursor-pointer transition-all shadow-2xs hover:border-slate-400 ${
-            cohortFilter === 'existing_only'
-              ? 'border-slate-600 ring-2 ring-slate-400/15 bg-gradient-to-br from-white to-slate-50'
-              : 'border-slate-200'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-heading">
-              Existing / Prior Users
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
-              <UserCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-heading font-extrabold text-3xl text-[#00215C] tracking-tight">
-              {loading && users.length === 0 ? '—' : existingUsersCount}
-            </span>
-            <span className="text-xs font-semibold text-slate-500">prior learners</span>
-          </div>
-          <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">Registered before this range</span>
-            <span className={`font-bold ${cohortFilter === 'existing_only' ? 'text-slate-700' : 'text-slate-400'}`}>
-              {cohortFilter === 'existing_only' ? '● Showing Prior Only' : 'Click to view'}
-            </span>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Filter and Search Bar */}
       <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
@@ -353,7 +242,7 @@ export const AdminUsers: React.FC = () => {
             ))}
           </select>
 
-          {(searchQuery || selectedDomain !== 'All Domains' || selectedLevel !== 'All Levels' || selectedSource !== 'All Sources' || dateRange.preset !== 'all' || cohortFilter !== 'all') && (
+          {(searchQuery || selectedDomain !== 'All Domains' || selectedLevel !== 'All Levels' || selectedSource !== 'All Sources' || dateRange.preset !== 'all') && (
             <button
               onClick={() => {
                 setSearchQuery('');
@@ -361,7 +250,6 @@ export const AdminUsers: React.FC = () => {
                 setSelectedLevel('All Levels');
                 setSelectedSource('All Sources');
                 setDateRange({ preset: 'all', startDate: null, endDate: null, label: 'All Time' });
-                setCohortFilter('all');
               }}
               className="text-[11px] font-semibold text-slate-500 hover:text-rose-600 transition-colors px-2 py-1"
             >
@@ -378,7 +266,7 @@ export const AdminUsers: React.FC = () => {
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-200/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider font-heading">
                 <th className="py-3 px-4">Learner</th>
-                <th className="py-3 px-4">Registration & Cohort</th>
+                <th className="py-3 px-4">Registration Date</th>
                 <th className="py-3 px-4">Source</th>
                 <th className="py-3 px-4">CEFR Level</th>
                 <th className="py-3 px-4">Primary Track</th>
@@ -436,25 +324,11 @@ export const AdminUsers: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Registration & Cohort */}
+                      {/* Registration Date */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[11px] text-slate-700 font-medium">
-                            {u.created_at ? new Date(u.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                          </span>
-                          <div>
-                            {isDateInRange(u.created_at, dateRange) ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <Sparkles className="w-2.5 h-2.5 text-emerald-500" />
-                                New User
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                                Existing
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        <span className="text-[11px] text-slate-700 font-medium">
+                          {u.created_at ? new Date(u.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        </span>
                       </td>
 
                       {/* Source */}
