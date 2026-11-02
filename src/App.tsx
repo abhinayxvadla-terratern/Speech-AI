@@ -38,6 +38,7 @@ import { Scenarios } from './pages/Scenarios';
 import { Interview } from './pages/Interview';
 import { Profile } from './pages/Profile';
 import { SessionDetail } from './pages/SessionDetail';
+import { Review } from './pages/Review';
 
 // 4 Admin Foundation Tabs (Direct URL only at /admin)
 import { AdminOverview } from './pages/admin/AdminOverview';
@@ -80,6 +81,7 @@ export const App: React.FC = () => {
                 <Route path="/scenarios/:id" element={<Scenarios />} />
                 <Route path="/interview" element={<Interview />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/review" element={<Review />} />
                 <Route path="/session/:id" element={<SessionDetail />} />
                 <Route path="/sessions/:id" element={<SessionDetail />} />
               </Route>

@@ -185,6 +185,17 @@ export interface Module {
   created_at: string;
 }
 
+export interface Character {
+  id: string;
+  name: string;
+  role: string;
+  domain: ParentDomain | string;
+  sub_branch: string | null;
+  intro_line: string;
+  is_active: boolean;
+  created_at?: string;
+}
+
 export interface Session {
   id: string;
   user_id: string;
@@ -194,6 +205,7 @@ export interface Session {
   scenario_type: string | null;
   interview_type: string | null;
   pressure_mode: string | null;
+  character_id?: string | null;
   started_at: string;
   ended_at: string | null;
   status: SessionStatus;

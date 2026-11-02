@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { DiagnosticRecapResult } from '../services/diagnosticService';
-import { ArrowLeft, Award, Clock, Loader2, AlertCircle, MessageSquare, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Award, Clock, Loader2, AlertCircle, MessageSquare, HelpCircle, Sparkles } from 'lucide-react';
 import { AppLogo } from '../components/common/AppLogo';
 import { FeedbackModal } from '../components/feedback/FeedbackModal';
+import { explainAdapter, ExplainResult } from '../services/explainAdapter';
 
 export const SessionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +16,8 @@ export const SessionDetail: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [recap, setRecap] = useState<DiagnosticRecapResult | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState<boolean>(false);
+  const [expandedExplainIdx, setExpandedExplainIdx] = useState<number | null>(null);
+  const [explainResults, setExplainResults] = useState<Record<number, ExplainResult>>({});
 
   useEffect(() => {
     const fetchSessionAndRecap = async () => {
@@ -187,6 +190,25 @@ export const SessionDetail: React.FC = () => {
                       <div key={i} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-2">
                         <div className="flex items-center justify-between text-slate-600 font-semibold">
                           <span className="font-bold text-[#00215C] text-sm">{m.category}</span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (expandedExplainIdx === i) {
+                                setExpandedExplainIdx(null);
+                                return;
+                              }
+                              if (!explainResults[i]) {
+                                const res = await explainAdapter.explain(m);
+                                setExplainResults((prev) => ({ ...prev, [i]: res }));
+                              }
+                              setExpandedExplainIdx(i);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#255CC1] text-[11px] font-bold transition-colors cursor-pointer"
+                            title="Explain why this rule applies"
+                          >
+                            <HelpCircle className="w-3 h-3 text-[#255CC1]" />
+                            <span>Why?</span>
+                          </button>
                         </div>
 
                         <div className="space-y-1.5">
@@ -216,6 +238,19 @@ export const SessionDetail: React.FC = () => {
                                   </span>
                                 )}
                               </div>
+                            </div>
+                          )}
+
+                          {/* Distinct Element 3: Why explanation */}
+                          {expandedExplainIdx === i && (
+                            <div className="p-3 rounded-lg bg-[#EBF2FF] border border-blue-200/80 text-xs text-[#00215C] space-y-1 animate-fadeIn">
+                              <div className="flex items-center gap-1.5 font-bold text-[10px] text-[#255CC1] uppercase tracking-wider">
+                                <Sparkles className="w-3 h-3 text-[#255CC1]" />
+                                <span>Why this is correct:</span>
+                              </div>
+                              <p className="text-slate-800 leading-relaxed font-normal text-xs">
+                                {explainResults[i]?.explanation || 'Analyzing German rule...'}
+                              </p>
                             </div>
                           )}
                         </div>

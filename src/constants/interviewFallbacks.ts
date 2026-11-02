@@ -2,9 +2,10 @@ import { InterviewSampleQuestion } from '../lib/database.types';
 
 export const getFallbackInterviewQuestions = (typeName?: string): InterviewSampleQuestion[] => {
   const lower = (typeName || '').toLowerCase();
+  let list: InterviewSampleQuestion[] = [];
 
   if (lower.includes('pflege') || lower.includes('health') || lower.includes('nurse') || lower.includes('arzt') || lower.includes('medical') || lower.includes('hospital')) {
-    return [
+    list = [
       {
         german: 'Guten Tag. Bitte stellen Sie sich kurz vor und beschreiben Sie Ihre bisherige klinische oder pflegerische Erfahrung.',
         english: 'Good day. Please introduce yourself briefly and describe your previous clinical or nursing experience.',
@@ -26,10 +27,8 @@ export const getFallbackInterviewQuestions = (typeName?: string): InterviewSampl
         guidance: 'Highlight modern standards, professional growth opportunities, and your commitment to long-term integration.'
       }
     ];
-  }
-
-  if (lower.includes('tech') || lower.includes('software') || lower.includes('engineer') || lower.includes('it') || lower.includes('developer')) {
-    return [
+  } else if (lower.includes('tech') || lower.includes('software') || lower.includes('engineer') || lower.includes('it') || lower.includes('developer')) {
+    list = [
       {
         german: 'Bitte stellen Sie sich kurz vor und erläutern Sie Ihren technischen Werdegang.',
         english: 'Please introduce yourself briefly and explain your technical career journey.',
@@ -51,29 +50,37 @@ export const getFallbackInterviewQuestions = (typeName?: string): InterviewSampl
         guidance: 'Connect your technical ambitions to the company’s product, engineering quality, and German innovation.'
       }
     ];
+  } else {
+    // Standard Workplace / General Job Interview Fallback
+    list = [
+      {
+        german: 'Können Sie sich bitte kurz vorstellen und Ihren beruflichen Werdegang zusammenfassen?',
+        english: 'Could you please introduce yourself briefly and summarize your professional background?',
+        guidance: 'Introduce yourself confidently, stating your key education, recent roles, and strengths.'
+      },
+      {
+        german: 'Warum bewerben Sie sich gerade für diese Stelle in unserem Unternehmen?',
+        english: 'Why are you applying for this position at our company?',
+        guidance: 'Demonstrate that you researched the company and explain why your skills make you the ideal fit.'
+      },
+      {
+        german: 'Was sind Ihre größten Stärken und wo sehen Sie noch Entwicklungsbedarf?',
+        english: 'What are your greatest strengths and where do you see room for further development?',
+        guidance: 'Give two concrete workplace strengths with examples, and one positive area you are actively developing.'
+      },
+      {
+        german: 'Wie gehen Sie mit stressigen Situationen oder engen Deadlines um?',
+        english: 'How do you manage stressful situations or tight deadlines?',
+        guidance: 'Show calm prioritization, team communication, and systematic problem-solving.'
+      }
+    ];
   }
 
-  // Standard Workplace / General Job Interview Fallback
-  return [
-    {
-      german: 'Können Sie sich bitte kurz vorstellen und Ihren beruflichen Werdegang zusammenfassen?',
-      english: 'Could you please introduce yourself briefly and summarize your professional background?',
-      guidance: 'Introduce yourself confidently, stating your key education, recent roles, and strengths.'
-    },
-    {
-      german: 'Warum bewerben Sie sich gerade für diese Stelle in unserem Unternehmen?',
-      english: 'Why are you applying for this position at our company?',
-      guidance: 'Demonstrate that you researched the company and explain why your skills make you the ideal fit.'
-    },
-    {
-      german: 'Was sind Ihre größten Stärken und wo sehen Sie noch Entwicklungsbedarf?',
-      english: 'What are your greatest strengths and where do you see room for further development?',
-      guidance: 'Give two concrete workplace strengths with examples, and one positive area you are actively developing.'
-    },
-    {
-      german: 'Wie gehen Sie mit stressigen Situationen oder engen Deadlines um?',
-      english: 'How do you manage stressful situations or tight deadlines?',
-      guidance: 'Show calm prioritization, team communication, and systematic problem-solving.'
-    }
-  ];
+  // Strictly sort short-to-long (word count then character length)
+  return [...list].sort((a, b) => {
+    const aWords = (a.german || '').trim().split(/\s+/).filter(Boolean).length;
+    const bWords = (b.german || '').trim().split(/\s+/).filter(Boolean).length;
+    if (aWords !== bWords) return aWords - bWords;
+    return (a.german || '').trim().length - (b.german || '').trim().length;
+  });
 };

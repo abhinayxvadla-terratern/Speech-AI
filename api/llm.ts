@@ -1,8 +1,9 @@
 import { getProviderApiKeys } from './_keyResolver';
 
 const GROQ_MODELS = [
-  'llama-3.3-70b-versatile',
   'llama-3.1-8b-instant',
+  'llama-3.3-70b-versatile',
+  'mixtral-8x7b-32768',
 ];
 
 const OPENROUTER_FREE_MODELS = [
@@ -26,9 +27,16 @@ async function callGroqWithKey(messages: any[], apiKey: string): Promise<any> {
 
   for (const model of GROQ_MODELS) {
     try {
+      const hasJson = messages.some(
+        (m: any) => typeof m?.content === 'string' && m.content.toLowerCase().includes('json')
+      );
+      const safeMessages = hasJson
+        ? messages
+        : [{ role: 'system', content: 'Return valid JSON.' }, ...messages];
+
       const payload = {
         model,
-        messages,
+        messages: safeMessages,
         temperature: 0.3,
         response_format: { type: 'json_object' },
       };
@@ -44,6 +52,7 @@ async function callGroqWithKey(messages: any[], apiKey: string): Promise<any> {
 
       if (!res.ok) {
         const errBody = await res.text();
+        console.error(`[API /api/llm] Groq model "${model}" returned HTTP ${res.status}:`, errBody);
         const err: any = new Error(`Groq LLM HTTP ${res.status}: ${errBody}`);
         err.status = res.status;
         throw err;
@@ -89,6 +98,7 @@ async function callOpenRouterWithKey(messages: any[], apiKey: string): Promise<a
 
       if (!res.ok) {
         const errBody = await res.text();
+        console.error(`[API /api/llm] OpenRouter model "${model}" returned HTTP ${res.status}:`, errBody);
         const err: any = new Error(`OpenRouter HTTP ${res.status}: ${errBody}`);
         err.status = res.status;
         throw err;

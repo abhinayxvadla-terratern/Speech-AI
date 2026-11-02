@@ -5,12 +5,14 @@ import { useActiveSession } from '../../contexts/ActiveSessionContext';
 import { voiceAdapter, VoiceSessionHandle, TranscriptTurn, VoiceState } from '../../services/voice';
 import { generateDiagnosticRecap, DiagnosticRecapResult } from '../../services/diagnosticService';
 import { recordSessionCompletionInStreak } from '../../lib/streaks';
-import { PressureMode, InterviewSampleQuestion, ExamSpeakingPromptText } from '../../lib/database.types';
+import { PressureMode, InterviewSampleQuestion, ExamSpeakingPromptText, Character } from '../../lib/database.types';
 import { PRESSURE_MODES } from '../../constants/interview';
 import { getFallbackInterviewQuestions } from '../../constants/interviewFallbacks';
 import { SessionDetailModal } from '../../components/SessionDetailModal';
 import { useAutoTurnVAD } from '../../services/voice/useAutoTurnVAD';
 import { AutoTurnStatusDock } from '../../components/voice/AutoTurnStatusDock';
+import { VoiceTurnControls } from '../../components/voice/VoiceTurnControls';
+import { matchCharacter, FALLBACK_CHARACTERS } from '../../services/characterService';
 import { 
   ArrowLeft, 
   CheckCircle2,
@@ -39,6 +41,7 @@ const formatTimestamp = (ts?: string) => {
 interface ActiveInterviewSessionProps {
   interviewTypeName: string;
   description: string;
+  character?: Character | null;
   mode: 'learn' | 'practice';
   pressureMode: PressureMode;
   durationMinutes: number | 'open';
@@ -55,6 +58,7 @@ interface ActiveInterviewSessionProps {
 export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
   interviewTypeName,
   description,
+  character,
   mode,
   pressureMode,
   durationMinutes,
@@ -69,6 +73,11 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
 }) => {
   const { user, profile } = useAuth();
   const { setSessionActive } = useActiveSession();
+
+  const activeCharacter = useMemo(() => {
+    if (character) return character;
+    return matchCharacter(FALLBACK_CHARACTERS, profile?.primary_domain, profile?.primary_subbranch);
+  }, [character, profile]);
 
   // Keep AppShell updated on immersive active session status
   useEffect(() => {
@@ -87,9 +96,66 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
   // Session State
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   const [turns, setTurns] = useState<TranscriptTurn[]>(initialTranscript);
+  const [displayedTurns, setDisplayedTurns] = useState<TranscriptTurn[]>(initialTranscript);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState<boolean>(false);
   const [isRepeatedMistakePause, setIsRepeatedMistakePause] = useState<boolean>(false);
+
+  // Voice Turn Controls Handlers
+  const handleSlower = () => {
+    if (!sessionHandle) return;
+    const eventTurn: TranscriptTurn = {
+      speaker: 'event',
+      text: 'Voice turn control: Slower (-20%)',
+      timestamp: new Date().toISOString(),
+      control: 'slower',
+    };
+    setTurns((prev) => {
+      const updated = [...prev, eventTurn];
+      if (dbSessionId) {
+        supabase.from('sessions').update({ transcript: updated }).eq('id', dbSessionId).then();
+      }
+      return updated;
+    });
+    setDisplayedTurns((prev) => [...prev, eventTurn]);
+    voiceAdapter.repeatLastPrompt?.(sessionHandle, { rate: '-20%' });
+  };
+
+  const handleRepeat = () => {
+    if (!sessionHandle) return;
+    const eventTurn: TranscriptTurn = {
+      speaker: 'event',
+      text: 'Voice turn control: Repeat',
+      timestamp: new Date().toISOString(),
+      control: 'repeat',
+    };
+    setTurns((prev) => {
+      const updated = [...prev, eventTurn];
+      if (dbSessionId) {
+        supabase.from('sessions').update({ transcript: updated }).eq('id', dbSessionId).then();
+      }
+      return updated;
+    });
+    setDisplayedTurns((prev) => [...prev, eventTurn]);
+    voiceAdapter.repeatLastPrompt?.(sessionHandle);
+  };
+
+  const handleHint = () => {
+    const eventTurn: TranscriptTurn = {
+      speaker: 'event',
+      text: 'Voice turn control: Hint requested',
+      timestamp: new Date().toISOString(),
+      control: 'hint',
+    };
+    setTurns((prev) => {
+      const updated = [...prev, eventTurn];
+      if (dbSessionId) {
+        supabase.from('sessions').update({ transcript: updated }).eq('id', dbSessionId).then();
+      }
+      return updated;
+    });
+    setDisplayedTurns((prev) => [...prev, eventTurn]);
+  };
 
   // Timer State
   const [secondsElapsed, setSecondsElapsed] = useState<number>(0);
@@ -159,10 +225,19 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
   };
 
   const effectiveQuestions: InterviewSampleQuestion[] = useMemo(() => {
+    let raw: InterviewSampleQuestion[] = [];
     if (Array.isArray(sampleQuestions) && sampleQuestions.length > 0) {
-      return sampleQuestions;
+      raw = sampleQuestions;
+    } else {
+      raw = getFallbackInterviewQuestions(interviewTypeName);
     }
-    return getFallbackInterviewQuestions(interviewTypeName);
+    // Strictly sort questions short-to-long (word count, then char length)
+    return [...raw].sort((a, b) => {
+      const aWords = (a.german || '').trim().split(/\s+/).filter(Boolean).length;
+      const bWords = (b.german || '').trim().split(/\s+/).filter(Boolean).length;
+      if (aWords !== bWords) return aWords - bWords;
+      return (a.german || '').trim().length - (b.german || '').trim().length;
+    });
   }, [sampleQuestions, interviewTypeName]);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
@@ -205,6 +280,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
               mode: isOpenInterview ? 'practice' : mode,
               interview_type: interviewTypeName,
               pressure_mode: pressureMode,
+              character_id: activeCharacter?.id || null,
               status: 'incomplete',
               transcript: initialTranscript,
               started_at: new Date().toISOString(),
@@ -229,6 +305,14 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           durationMinutes: durationMinutes,
           isOpenInterview: isOpenInterview,
           cefr_level: isOpenInterview ? undefined : (profile?.cefr_level || 'B1'),
+          character: activeCharacter
+            ? {
+                id: activeCharacter.id,
+                name: activeCharacter.name,
+                role: activeCharacter.role,
+                intro_line: activeCharacter.intro_line,
+              }
+            : undefined,
         });
 
         if (!active) return;
@@ -284,6 +368,15 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
             return updated;
           });
 
+          setDisplayedTurns((prev) => {
+            const existingIdx = prev.findIndex(
+              (t) => t === newTurn || (t.timestamp === newTurn.timestamp && t.speaker === newTurn.speaker)
+            );
+            return existingIdx >= 0
+              ? prev.map((t, i) => (i === existingIdx ? { ...newTurn } : t))
+              : [...prev, newTurn];
+          });
+
           if (newTurn.sessionEnded) {
             setTimeout(() => {
               if (active) handleFinishRef.current();
@@ -299,6 +392,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
               const nextIdx = curIdx + 1;
               currentQuestionIndexRef.current = nextIdx;
               setCurrentQuestionIndex(nextIdx);
+              setDisplayedTurns([]); // Reset stage cleanly for next question!
               const nextQ = effectiveQuestions[nextIdx];
               if (handle && handle.context) {
                 handle.context.targetPhrase = nextQ.german;
@@ -465,6 +559,12 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
               }`}>
                 {isOpenInterview ? 'Open Simulation' : mode === 'learn' ? 'Guided Interview' : 'Evaluation'}
               </span>
+              {activeCharacter && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span>Interviewer: {activeCharacter.name} ({activeCharacter.role})</span>
+                </span>
+              )}
               <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold flex items-center gap-1 ${
                 isTimeUp
                   ? 'bg-rose-50 border-rose-200 text-rose-700 animate-pulse'
@@ -622,7 +722,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
 
       {/* Transcript Conversation Area with Guaranteed Bottom Clearance */}
       <div className="flex-1 space-y-3.5 py-2 overflow-y-auto px-1 pb-36">
-        {turns.length === 0 ? (
+        {displayedTurns.length === 0 ? (
           <div className="py-6 sm:py-10 text-center text-slate-400 bg-white/80 rounded-2xl border border-slate-200/70 p-4 sm:p-6 shadow-xs">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center mx-auto mb-2.5 shadow-xs">
               <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
@@ -633,7 +733,17 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
             </p>
           </div>
         ) : (
-          turns.map((turn, idx) => {
+          displayedTurns.map((turn, idx) => {
+            if (turn.speaker === 'event') {
+              return (
+                <div key={idx} className="flex justify-center my-1.5 animate-fadeIn">
+                  <span className="text-[10px] text-slate-500 bg-slate-100/90 border border-slate-200/60 px-2.5 py-0.5 rounded-full font-medium">
+                    {turn.control ? `Requested ${turn.control}` : turn.text}
+                  </span>
+                </div>
+              );
+            }
+
             const isUser = turn.speaker === 'user';
             return (
               <div key={idx} className="space-y-1.5 animate-fadeIn">
@@ -670,38 +780,33 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           })
         )}
 
-        {/* Live Audio / Speaking Indicators */}
-        {voiceState === 'processing' && (
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium animate-pulse">
-            <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
-            <span>Evaluating response under {pressureMode} pacing...</span>
-          </div>
-        )}
-
-        {voiceState === 'speaking' && (
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 border border-blue-200 text-[#255CC1] text-xs font-medium animate-pulse">
-            <Volume2 className="w-4 h-4 text-[#255CC1]" />
-            <span>German interviewer is speaking...</span>
-          </div>
-        )}
-
         <div ref={turnsEndRef} />
       </div>
 
-      {/* Bottom Voice Status Dock with Automatic Turn-Taking */}
-      <AutoTurnStatusDock
-        voiceState={voiceState}
-        isUserSpeaking={isUserSpeaking}
-        isManualPaused={isManualPaused}
-        vadError={vadError}
-        volumeLevel={volumeLevel}
-        interimTranscript={interimTranscript}
-        onTogglePause={togglePause}
-        onManualSubmit={manualSubmit}
-        onManualStartSpeaking={manualStartSpeaking}
-        onRequestPermission={requestMicrophonePermission}
-        agentName="Interviewer"
-      />
+      {/* Bottom Voice Status Dock with Automatic Turn-Taking & Voice-Turn Controls */}
+      <div className="shrink-0 z-10 pt-1 flex flex-col items-center gap-2">
+        <VoiceTurnControls
+          onSlower={handleSlower}
+          onRepeat={handleRepeat}
+          onHint={handleHint}
+          hintText={currentQuestion.english ? `Question meaning: "${currentQuestion.english}"` : null}
+          showHint={mode === 'learn' && !isExamMode}
+          disabled={voiceState === 'speaking' || isFinishing}
+        />
+        <AutoTurnStatusDock
+          voiceState={voiceState}
+          isUserSpeaking={isUserSpeaking}
+          isManualPaused={isManualPaused}
+          vadError={vadError}
+          volumeLevel={volumeLevel}
+          interimTranscript={interimTranscript}
+          onTogglePause={togglePause}
+          onManualSubmit={manualSubmit}
+          onManualStartSpeaking={manualStartSpeaking}
+          onRequestPermission={requestMicrophonePermission}
+          agentName={activeCharacter?.name || "Interviewer"}
+        />
+      </div>
 
       {/* Completion Recap Modal */}
       {completedSummary && (

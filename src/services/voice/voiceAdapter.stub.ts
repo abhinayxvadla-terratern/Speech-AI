@@ -184,11 +184,26 @@ class StubVoiceAdapter implements VoiceAdapter {
     return session.turns[session.turns.length - 1] || null;
   }
 
-  async speak(sessionHandle: VoiceSessionHandle, text: string): Promise<void> {
+  private lastSpokenTextMap = new Map<string, string>();
+
+  getLastSpokenText(sessionHandle: VoiceSessionHandle): string | null {
+    return this.lastSpokenTextMap.get(sessionHandle.id) || null;
+  }
+
+  async repeatLastPrompt(sessionHandle: VoiceSessionHandle, options?: { rate?: string }): Promise<void> {
+    const last = this.lastSpokenTextMap.get(sessionHandle.id) || sessionHandle.context.targetPhrase;
+    if (last) {
+      await this.speak(sessionHandle, last, options);
+    }
+  }
+
+  async speak(sessionHandle: VoiceSessionHandle, text: string, _options?: { rate?: string }): Promise<void> {
     const session = this.sessions.get(sessionHandle.id);
     if (!session) {
       throw new Error(`Session ${sessionHandle.id} does not exist`);
     }
+
+    this.lastSpokenTextMap.set(sessionHandle.id, text);
 
     // 1. Simulate brief speaking animation state (~1.0 second)
     this.updateState(session, 'speaking');
@@ -217,6 +232,29 @@ class StubVoiceAdapter implements VoiceAdapter {
   async speakSegments(sessionHandle: VoiceSessionHandle, segments: SpeechSegment[]): Promise<void> {
     const combinedText = segments.map((s) => s.text).join('\n\n');
     await this.speak(sessionHandle, combinedText);
+  }
+
+  async speakPhrasePrompt(
+    sessionHandle: VoiceSessionHandle,
+    phrase: { german: string; english: string },
+    isFirst: boolean,
+    userName: string,
+    moduleTitle: string = 'German Speech Workout'
+  ): Promise<void> {
+    const greeting = isFirst
+      ? `Welcome ${userName}! Today we are practicing ${moduleTitle}. Here is your first phrase:`
+      : `Great! The next phrase is:`;
+    const text = `${greeting}\n\n${phrase.german}\n\nThis means: "${phrase.english}". Now, please say it in German!`;
+    await this.speak(sessionHandle, text);
+  }
+
+  async speakPhraseRetryPrompt(
+    sessionHandle: VoiceSessionHandle,
+    phrase: { german: string; english: string },
+    tip?: string
+  ): Promise<void> {
+    const text = `${tip ? `Remember: ${tip}. ` : ''}Listen once more:\n\n${phrase.german}\n\nNow, give it another try!`;
+    await this.speak(sessionHandle, text);
   }
 
   async speakPracticeReview(sessionHandle: VoiceSessionHandle): Promise<void> {

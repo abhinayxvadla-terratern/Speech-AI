@@ -52,6 +52,7 @@ function edgeTtsDevPlugin(): Plugin {
           const url = new URL(req.url, 'http://localhost');
           let text = url.searchParams.get('text');
           let voice = url.searchParams.get('voice') || 'de-DE-KatjaNeural';
+          let rate = url.searchParams.get('rate') || '+0%';
 
           if (req.method === 'POST') {
             const body = await new Promise<string>((resolve) => {
@@ -64,6 +65,7 @@ function edgeTtsDevPlugin(): Plugin {
                 const parsed = JSON.parse(body);
                 if (parsed.text) text = parsed.text;
                 if (parsed.voice) voice = parsed.voice;
+                if (parsed.rate) rate = parsed.rate;
               } catch {
                 // ignore json parse error, fall back to query params
               }
@@ -80,7 +82,7 @@ function edgeTtsDevPlugin(): Plugin {
           const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
           const tts = new MsEdgeTTS();
           await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-          const { audioStream } = tts.toStream(text);
+          const { audioStream } = tts.toStream(text, { rate });
 
           const chunks: any[] = [];
           await new Promise<void>((resolve, reject) => {

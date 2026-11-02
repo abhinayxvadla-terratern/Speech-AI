@@ -1,4 +1,4 @@
-export type SpeakerRole = 'user' | 'agent';
+export type SpeakerRole = 'user' | 'agent' | 'event';
 
 export interface TranscriptTurn {
   speaker: SpeakerRole;
@@ -9,10 +9,14 @@ export interface TranscriptTurn {
   correction?: string | null;
   category?: string | null;
   feedback_en?: string | null;
+  what_was_good?: string | null;
+  what_to_change?: string | null;
+  score?: number | null;
   confidence_hedge?: boolean;
   sessionEnded?: boolean;
   isCheckIn?: boolean;
   llm_provider?: 'groq' | 'openrouter';
+  control?: 'slower' | 'repeat' | 'hint';
 }
 
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
@@ -37,6 +41,13 @@ export interface VoiceSessionContext {
   durationMinutes?: number | 'open';
   isOpenInterview?: boolean;
   minutesLimit?: string;
+  character?: {
+    id: string;
+    name: string;
+    role: string;
+    domain?: string;
+    intro_line?: string;
+  } | null;
   [key: string]: any;
 }
 
@@ -61,8 +72,22 @@ export interface VoiceAdapter {
   onTranscript(sessionHandle: VoiceSessionHandle, callback: TranscriptCallback): () => void;
   onStateChange?(sessionHandle: VoiceSessionHandle, callback: VoiceStateCallback): () => void;
   onSessionEnded?(sessionHandle: VoiceSessionHandle, callback: SessionEndedCallback): () => void;
-  speak(sessionHandle: VoiceSessionHandle, text: string): Promise<void>;
+  speak(sessionHandle: VoiceSessionHandle, text: string, options?: { rate?: string }): Promise<void>;
+  repeatLastPrompt?(sessionHandle: VoiceSessionHandle, options?: { rate?: string }): Promise<void>;
+  getLastSpokenText?(sessionHandle: VoiceSessionHandle): string | null;
   speakSegments?(sessionHandle: VoiceSessionHandle, segments: SpeechSegment[]): Promise<void>;
+  speakPhrasePrompt?(
+    sessionHandle: VoiceSessionHandle,
+    phrase: { german: string; english: string },
+    isFirst: boolean,
+    userName: string,
+    moduleTitle?: string
+  ): Promise<void>;
+  speakPhraseRetryPrompt?(
+    sessionHandle: VoiceSessionHandle,
+    phrase: { german: string; english: string },
+    tip?: string
+  ): Promise<void>;
   speakPracticeReview?(sessionHandle: VoiceSessionHandle): Promise<void>;
   stopSpeaking?(sessionHandle?: VoiceSessionHandle): void;
   triggerFinalClosingTurn?(sessionHandle: VoiceSessionHandle): Promise<TranscriptTurn | null>;

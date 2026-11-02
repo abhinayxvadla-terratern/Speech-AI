@@ -458,13 +458,30 @@ export const Home: React.FC = () => {
 
       {/* 5. FOCUS AREAS (ONLY shown if 3+ diagnostic_recaps rows exist) */}
       {slippingStats && (
-        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="p-1 rounded-lg bg-amber-50 text-amber-600 border border-amber-200/60">
-              <TrendingDown className="w-4 h-4" />
-            </span>
-            <span className="text-xs font-bold text-[#00215C] uppercase tracking-wider">
-              Focus Areas
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/review')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigate('/review');
+            }
+          }}
+          className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs hover:border-[#255CC1]/50 hover:shadow-sm transition-all cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded-lg bg-amber-50 text-amber-600 border border-amber-200/60">
+                <TrendingDown className="w-4 h-4" />
+              </span>
+              <span className="text-xs font-bold text-[#00215C] uppercase tracking-wider">
+                Where you're slipping
+              </span>
+            </div>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-[#255CC1] group-hover:translate-x-0.5 transition-transform">
+              <span>Review</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </span>
           </div>
 
@@ -473,7 +490,7 @@ export const Home: React.FC = () => {
           </p>
 
           <p className="text-xs text-slate-500 mt-1 leading-relaxed font-normal">
-            Target this pattern in your next voice simulation.
+            Tap to review your mistake history and practice targeted drills.
           </p>
         </div>
       )}

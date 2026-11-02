@@ -21,6 +21,7 @@ export function useAutoTurnVAD({
 }: UseAutoTurnVADOptions) {
   const [isVadInitialized, setIsVadInitialized] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
+  const isUserSpeakingRef = useRef(false);
   const [isManualPaused, setIsManualPaused] = useState(false);
   const [vadError, setVadError] = useState<string | null>(null);
   const [volumeLevel, setVolumeLevel] = useState<number>(0);
@@ -42,6 +43,10 @@ export function useAutoTurnVAD({
   // Web Speech API recognition ref (client-side German STT)
   const recognitionRef = useRef<any>(null);
   const latestTranscriptRef = useRef<string>('');
+
+  // Synchronous ref to prevent mic activation while the voice agent is speaking
+  const voiceStateRef = useRef(voiceState);
+  voiceStateRef.current = voiceState;
 
   // ---------------------------------------------------------------------------
   // 1. Audio Meter Setup (Volume level visualization)
@@ -145,6 +150,14 @@ export function useAutoTurnVAD({
         console.debug('[useAutoTurnVAD] Speech recognition notice:', e.error);
       };
 
+      recognition.onend = () => {
+        if (isUserSpeakingRef.current && recognitionRef.current) {
+          try {
+            recognitionRef.current.start();
+          } catch (_) {}
+        }
+      };
+
       recognitionRef.current = recognition;
     } catch (e) {
       console.warn('[useAutoTurnVAD] Web Speech API init error:', e);
@@ -226,15 +239,19 @@ export function useAutoTurnVAD({
     initSpeechRecognition();
 
     const vad = new VadManager({
-      redemptionMs: 2000,
-      positiveSpeechThreshold: 0.5,
-      negativeSpeechThreshold: 0.35,
-      preSpeechPadMs: 400,
+      redemptionMs: 1800,
+      positiveSpeechThreshold: 0.4,
+      negativeSpeechThreshold: 0.3,
+      preSpeechPadMs: 700,
       minSpeechMs: 250,
       baseAssetPath: '/vad-assets/',
       onnxWASMBasePath: '/vad-assets/',
       onSpeechStart: () => {
         if (!isMounted) return;
+        // Strictly ignore mic while the voice agent is speaking or processing
+        if (voiceStateRef.current !== 'idle' || isSendingAudioRef.current) return;
+
+        isUserSpeakingRef.current = true;
         setIsUserSpeaking(true);
         if (voiceAdapter.cancelSilenceTimer && sessionHandle) {
           voiceAdapter.cancelSilenceTimer(sessionHandle);
@@ -248,7 +265,15 @@ export function useAutoTurnVAD({
       },
       onSpeechEnd: async (wavBlob: Blob) => {
         if (!isMounted || isSendingAudioRef.current) return;
+        // Strictly reject audio if the voice agent was speaking
+        if (voiceStateRef.current !== 'idle') {
+          setIsUserSpeaking(false);
+          isUserSpeakingRef.current = false;
+          return;
+        }
+
         latestWavBlobRef.current = wavBlob;
+        isUserSpeakingRef.current = false;
         setIsUserSpeaking(false);
         isSendingAudioRef.current = true;
         setIsSendingAudio(true);
@@ -350,6 +375,7 @@ export function useAutoTurnVAD({
       await vad.resumeManually();
     } else {
       setIsManualPaused(true);
+      isUserSpeakingRef.current = false;
       setIsUserSpeaking(false);
       await vad.pauseManually();
       if (voiceAdapter.cancelSilenceTimer && sessionHandle) {
@@ -359,6 +385,7 @@ export function useAutoTurnVAD({
   }, [isManualPaused, sessionHandle, voiceAdapter]);
 
   const manualStartSpeaking = useCallback(async () => {
+    isUserSpeakingRef.current = true;
     setIsUserSpeaking(true);
     setVadError(null);
     if (voiceAdapter.cancelSilenceTimer && sessionHandle) {

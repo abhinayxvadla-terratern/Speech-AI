@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Module, Session } from '../lib/database.types';
+import { Module } from '../lib/database.types';
 import { ActiveSession } from './speak/ActiveSession';
 import { 
   Mic, 
@@ -38,15 +38,13 @@ export const Speak: React.FC = () => {
   // Navigation State
   const [view, setView] = useState<SpeakView>('list');
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
-  const selectedDuration: number | 'open' = 5;
+  const WORKOUT_DURATION_MINUTES = 3;
 
   // Modules & Sessions Data
   const [modules, setModules] = useState<Module[]>([]);
   const [completedModuleIds, setCompletedModuleIds] = useState<Set<string>>(new Set());
+  const [failedModuleIds, setFailedModuleIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState<boolean>(true);
-
-  // Incomplete session for selected module
-  const [incompleteSession, setIncompleteSession] = useState<Session | null>(null);
 
   // Fetch modules & completed sessions for current level
   const loadModuleData = async () => {
@@ -75,10 +73,10 @@ export const Speak: React.FC = () => {
         }
       }
 
-      // 2. Fetch completed sessions
+      // 2. Fetch completed sessions with transcripts to verify score > 2 pass condition
       const { data: sessData, error: sessErr } = await supabase
         .from('sessions')
-        .select('module_id')
+        .select('module_id, transcript')
         .eq('user_id', user.id)
         .eq('tab', 'speak')
         .eq('status', 'completed');
@@ -86,10 +84,36 @@ export const Speak: React.FC = () => {
       if (sessErr) throw sessErr;
 
       const completedIds = new Set<string>();
+      const failedIds = new Set<string>();
+
       (sessData || []).forEach((s) => {
-        if (s.module_id) completedIds.add(s.module_id);
+        if (s.module_id) {
+          const transcript = Array.isArray(s.transcript) ? s.transcript : [];
+          const userTurns = transcript.filter((t: any) => t.speaker === 'user');
+          if (userTurns.length > 0) {
+            const totalScore = userTurns.reduce(
+              (sum: number, t: any) =>
+                sum + (typeof t.score === 'number' ? t.score : t.isCorrect ? 5 : 2),
+              0
+            );
+            const avgScore = totalScore / userTurns.length;
+            if (avgScore > 2) {
+              completedIds.add(s.module_id);
+            } else {
+              failedIds.add(s.module_id);
+            }
+          } else {
+            // Older historical sessions grant access if marked completed
+            completedIds.add(s.module_id);
+          }
+        }
       });
+
+      // Passing supersedes any previous failure
+      completedIds.forEach((id) => failedIds.delete(id));
+
       setCompletedModuleIds(completedIds);
+      setFailedModuleIds(failedIds);
     } catch (err) {
       console.error('Error loading speak module data:', err);
     } finally {
@@ -101,35 +125,27 @@ export const Speak: React.FC = () => {
     loadModuleData();
   }, [user, cefrLevel]);
 
-  // Check for incomplete session when selecting a module
+  // Clean up any stale incomplete session when selecting a module to ensure fresh start
   const checkIncompleteSession = async (mod: Module) => {
     if (!user) return;
-    setIncompleteSession(null);
     try {
-      const { data, error } = await supabase
+      await supabase
         .from('sessions')
-        .select('*')
+        .update({ status: 'abandoned', ended_at: new Date().toISOString() })
         .eq('user_id', user.id)
         .eq('module_id', mod.id)
-        .eq('status', 'incomplete')
-        .order('started_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!error && data) {
-        setIncompleteSession(data as Session);
-      }
+        .eq('status', 'incomplete');
     } catch (err) {
-      console.error('Error checking incomplete session:', err);
+      console.warn('Error clearing stale incomplete session:', err);
     }
   };
 
-  // Open Module into Preview Screen
+  // Open Module directly into Workout Session
   const handleSelectModule = (mod: Module, isAccessible: boolean) => {
     if (!isAccessible) return;
-    setSelectedModule(mod);
     checkIncompleteSession(mod);
-    setView('preview');
+    setSelectedModule(mod);
+    setView('session');
   };
 
   // Module Status Calculator
@@ -206,12 +222,18 @@ export const Speak: React.FC = () => {
     const userDomain = profile?.primary_domain;
     const domainVariant = userDomain && contentObj.domain_variants?.[userDomain] ? contentObj.domain_variants[userDomain] : null;
     const effectiveContent = domainVariant || contentObj;
-    const previewPhrases: Array<{ german: string; english: string }> =
+    const rawPreview: Array<{ german: string; english: string }> =
       effectiveContent.target_phrases && effectiveContent.target_phrases.length > 0
         ? effectiveContent.target_phrases
         : effectiveContent.target_phrase
           ? [{ german: effectiveContent.target_phrase, english: effectiveContent.english_meaning || '' }]
           : [];
+    const previewPhrases: Array<{ german: string; english: string }> = [...rawPreview].sort((a, b) => {
+      const aWords = a.german.trim().split(/\s+/).filter(Boolean).length;
+      const bWords = b.german.trim().split(/\s+/).filter(Boolean).length;
+      if (aWords !== bWords) return aWords - bWords;
+      return a.german.trim().length - b.german.trim().length;
+    });
     const examples: string[] = effectiveContent.example_sentences || [];
 
     return (
@@ -240,7 +262,7 @@ export const Speak: React.FC = () => {
               </span>
               <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 ml-auto">
                 <Clock className="w-3.5 h-3.5 text-[#255CC1]" />
-                ~3 minutes
+                ~{WORKOUT_DURATION_MINUTES} minutes
               </span>
             </div>
 
@@ -322,18 +344,16 @@ export const Speak: React.FC = () => {
       <ActiveSession
         module={selectedModule}
         mode="learn"
-        durationMinutes={selectedDuration}
-        initialSessionId={incompleteSession?.id || null}
-        initialTranscript={(incompleteSession?.transcript as any) || []}
+        durationMinutes={WORKOUT_DURATION_MINUTES}
+        initialSessionId={null}
+        initialTranscript={[]}
         onBack={() => {
           setView('list');
           setSelectedModule(null);
-          setIncompleteSession(null);
         }}
         onCompleted={() => {
           setView('list');
           setSelectedModule(null);
-          setIncompleteSession(null);
           loadModuleData();
         }}
       />
@@ -464,7 +484,13 @@ export const Speak: React.FC = () => {
 
                         {isCompleted && (
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                            Completed
+                            Passed
+                          </span>
+                        )}
+
+                        {!isCompleted && failedModuleIds.has(mod.id) && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                            Score ≤ 2 • Retry to Unlock Next
                           </span>
                         )}
 

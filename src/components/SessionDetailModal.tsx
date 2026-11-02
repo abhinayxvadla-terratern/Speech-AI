@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Award, HelpCircle, BookOpen, AlertTriangle, Star } from 'lucide-react';
+import { Award, HelpCircle, BookOpen, AlertTriangle, Star, Sparkles } from 'lucide-react';
 import { DiagnosticRecapResult } from '../services/diagnosticService';
 import { FeedbackModal } from './feedback/FeedbackModal';
+import { explainAdapter, ExplainResult } from '../services/explainAdapter';
 
 interface SessionDetailModalProps {
   isOpen: boolean;
@@ -17,6 +18,9 @@ interface SessionDetailModalProps {
   phrasesCompleted?: number;
   totalPhrases?: number;
   userTurnsCount?: number;
+  score?: number;
+  passed?: boolean;
+  onRetry?: () => void;
 }
 
 export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
@@ -32,8 +36,13 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
   phrasesCompleted,
   totalPhrases,
   userTurnsCount,
+  score,
+  passed,
+  onRetry,
 }) => {
   const [feedbackOpen, setFeedbackOpen] = useState<boolean>(false);
+  const [expandedExplainIdx, setExpandedExplainIdx] = useState<number | null>(null);
+  const [explainResults, setExplainResults] = useState<Record<number, ExplainResult>>({});
 
   if (!isOpen) return null;
 
@@ -48,7 +57,9 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
       : false;
 
   const mistakeCount = Array.isArray(recap.mistakes) ? recap.mistakes.length : 0;
-  const earnedStars = isZeroSpeech
+  const earnedStars = typeof score === 'number'
+    ? score
+    : isZeroSpeech
     ? 1
     : isIncompleteWorkout
     ? (mistakeCount === 0 ? 2 : 1)
@@ -60,13 +71,15 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
     ? 3
     : 2;
 
+  const isPassed = passed !== undefined ? passed : earnedStars > 2;
+
   const starLabel = isZeroSpeech
     ? '1 / 5 Stars • No Speech Detected'
     : isIncompleteWorkout
     ? `${earnedStars} / 5 Stars • Workout Ended Early`
-    : earnedStars === 5
-    ? '5 / 5 Stars • Flawless Workout!'
-    : `${earnedStars} / 5 Stars • Good Effort!`;
+    : isPassed
+    ? `${earnedStars} / 5 Stars • Passed! Next Module Unlocked`
+    : `${earnedStars} / 5 Stars • Score Below 2 • Retry Required`;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -119,6 +132,19 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Score Below 2 Notice Banner */}
+        {!isPassed && !isRepeatedMistakePause && (
+          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5 my-1">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-amber-950">Score Below 2 • Retry Required</p>
+              <p className="mt-0.5 text-amber-800 leading-relaxed font-normal">
+                A score above 2 is required to unlock the next session. Review the corrections below and retry this workout to continue.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* 5-Mistake Threshold Notice Banner */}
         {isRepeatedMistakePause && (
@@ -192,6 +218,25 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                     <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-2 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-[#00215C]">{m.category}</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (expandedExplainIdx === i) {
+                              setExpandedExplainIdx(null);
+                              return;
+                            }
+                            if (!explainResults[i]) {
+                              const res = await explainAdapter.explain(m);
+                              setExplainResults((prev) => ({ ...prev, [i]: res }));
+                            }
+                            setExpandedExplainIdx(i);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#255CC1] text-[11px] font-bold transition-colors cursor-pointer"
+                          title="Explain the underlying grammar or pronunciation rule"
+                        >
+                          <HelpCircle className="w-3 h-3 text-[#255CC1]" />
+                          <span>Why?</span>
+                        </button>
                       </div>
 
                       <div className="space-y-1.5">
@@ -223,6 +268,19 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                             </div>
                           </div>
                         )}
+
+                        {/* Distinct Element 3: "Why?" Explanation Panel */}
+                        {expandedExplainIdx === i && (
+                          <div className="p-2.5 rounded-lg bg-[#EBF2FF] border border-blue-200/80 text-xs text-[#00215C] space-y-1 animate-fadeIn">
+                            <div className="flex items-center gap-1.5 font-bold text-[10px] text-[#255CC1] uppercase tracking-wider">
+                              <Sparkles className="w-3 h-3 text-[#255CC1]" />
+                              <span>Why this is correct:</span>
+                            </div>
+                            <p className="text-slate-800 leading-relaxed font-normal text-[11px]">
+                              {explainResults[i]?.explanation || 'Analyzing German rule...'}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -247,10 +305,20 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
           </div>
 
           <button
-            onClick={onActionButtonClick}
-            className="w-full py-3.5 px-5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white font-semibold text-sm transition-all shadow-sm active:scale-[0.98]"
+            onClick={() => {
+              if (!isPassed && !isRepeatedMistakePause && onRetry) {
+                onRetry();
+              } else {
+                onActionButtonClick();
+              }
+            }}
+            className={`w-full py-3.5 px-5 rounded-xl font-semibold text-sm transition-all shadow-sm active:scale-[0.98] ${
+              !isPassed && !isRepeatedMistakePause
+                ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                : 'bg-[#00215C] hover:bg-[#143471] text-white'
+            }`}
           >
-            {actionButtonText}
+            {!isPassed && !isRepeatedMistakePause ? 'Retry This Workout ↺' : actionButtonText}
           </button>
         </div>
       </div>

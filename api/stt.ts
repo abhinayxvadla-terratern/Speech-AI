@@ -32,11 +32,17 @@ export default async function handler(req: any, res: any) {
     }
 
     const contentType = req.headers['content-type'] || 'audio/wav';
+    const targetPhrase = req.query?.targetPhrase || req.headers['x-target-phrase'] || '';
     let fileExt = 'wav';
     if (contentType.includes('webm')) fileExt = 'webm';
     else if (contentType.includes('ogg')) fileExt = 'ogg';
     else if (contentType.includes('mp4') || contentType.includes('m4a')) fileExt = 'm4a';
     else if (contentType.includes('mp3') || contentType.includes('mpeg')) fileExt = 'mp3';
+
+    // Native German vocabulary bias prompt for Whisper
+    const whisperPrompt = targetPhrase
+      ? `Deutsch Ausspracheübung: ${targetPhrase}. Guten Tag, bitte, danke, hallo, wie geht es Ihnen, auf Wiedersehen.`
+      : "Deutsch Ausspracheübung: Guten Tag, bitte, danke, hallo, wie geht es Ihnen, auf Wiedersehen, alles klar.";
 
     let lastError: any = null;
 
@@ -49,10 +55,7 @@ export default async function handler(req: any, res: any) {
         formData.append('model', 'whisper-large-v3');
         formData.append('language', 'de');
         formData.append('response_format', 'verbose_json');
-        formData.append(
-          'prompt',
-          "This is a language learner's German speech practice attempt. It may contain grammar errors, wrong word order, incorrect case usage, or mispronunciations. Transcribe exactly what is said, including any mistakes — do not correct, normalize, or autocorrect the German toward what a fluent speaker would have said."
-        );
+        formData.append('prompt', whisperPrompt);
 
         const sttRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
           method: 'POST',
@@ -68,7 +71,24 @@ export default async function handler(req: any, res: any) {
         }
 
         const data: any = await sttRes.json();
-        const transcript = (data.text || '').trim();
+        let transcript = (data.text || '').trim();
+
+        // Guard against classic Whisper hallucinations on short German audio clips
+        const lower = transcript.toLowerCase();
+        const isHallucination =
+          lower.includes('vielen dank fürs zuschauen') ||
+          lower.includes('danke fürs zuschauen') ||
+          lower.includes('untertitel') ||
+          lower.includes('subtitles') ||
+          lower.includes('amara.org') ||
+          lower.includes('zdf') ||
+          lower.includes('[musik]') ||
+          lower.includes('(musik)') ||
+          lower.includes('copyright');
+
+        if (isHallucination) {
+          transcript = '';
+        }
 
         let confidence: 'high' | 'medium' | 'low' = 'high';
         if (Array.isArray(data.segments) && data.segments.length > 0) {

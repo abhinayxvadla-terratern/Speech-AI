@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { InterviewType, Session, PressureMode, CefrLevel } from '../lib/database.types';
+import { InterviewType, Session, PressureMode, CefrLevel, Character } from '../lib/database.types';
 import { PRESSURE_MODES, INTERVIEW_DURATIONS } from '../constants/interview';
 import { ActiveInterviewSession } from './interview/ActiveInterviewSession';
 import { ExamModeFlow } from './interview/ExamModeFlow';
@@ -21,6 +21,7 @@ import {
 import { useKillSwitch } from '../hooks/useKillSwitch';
 import { TabUnavailableBanner } from '../components/layout/TabUnavailableBanner';
 import { getFallbackInterviewQuestions } from '../constants/interviewFallbacks';
+import { fetchActiveCharacters, matchCharacter } from '../services/characterService';
 
 type InterviewView = 'list' | 'setup' | 'session' | 'exam';
 
@@ -48,7 +49,13 @@ export const Interview: React.FC = () => {
 
   // Interview types data
   const [interviewTypes, setInterviewTypes] = useState<InterviewType[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Fetch active characters
+  useEffect(() => {
+    fetchActiveCharacters().then(setCharacters);
+  }, []);
 
   // Incomplete session detection
   const [incompleteSession, setIncompleteSession] = useState<Session | null>(null);
@@ -223,6 +230,7 @@ export const Interview: React.FC = () => {
       <ActiveInterviewSession
         interviewTypeName={activeTypeName}
         description={activeDescription}
+        character={matchCharacter(characters, primaryDomain, primarySubbranch)}
         mode={activeMode}
         pressureMode={pressureMode}
         durationMinutes={durationMinutes}
@@ -298,6 +306,17 @@ export const Interview: React.FC = () => {
             <p className="text-sm text-slate-600 mt-2 leading-relaxed font-normal">
               {desc}
             </p>
+
+            {(() => {
+              const char = matchCharacter(characters, primaryDomain, primarySubbranch);
+              return char ? (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/70 border border-blue-200/60 text-xs text-[#00215C] mt-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="font-bold">Interviewer: {char.name}</span>
+                  <span className="text-slate-500">({char.role})</span>
+                </div>
+              ) : null;
+            })()}
           </div>
 
           {/* PRESSURE MODE SELECTOR */}
@@ -630,6 +649,18 @@ export const Interview: React.FC = () => {
                       <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed font-normal line-clamp-2">
                         {t.description}
                       </p>
+
+                      {(() => {
+                        const char = matchCharacter(characters, primaryDomain, primarySubbranch);
+                        return char ? (
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-700 font-semibold bg-slate-50/90 px-2.5 py-1 rounded-xl border border-slate-200/60 mt-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            <span className="text-[#00215C] font-bold">{char.name}</span>
+                            <span className="text-slate-400">·</span>
+                            <span className="text-slate-500 font-medium truncate">{char.role}</span>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
 
                     <div className="flex items-center justify-end mt-4 pt-3 border-t border-slate-100 text-slate-400 group-hover:text-[#255CC1] transition-colors text-xs font-semibold gap-1">
@@ -673,6 +704,18 @@ export const Interview: React.FC = () => {
                       <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed font-normal line-clamp-2">
                         {t.description}
                       </p>
+
+                      {(() => {
+                        const char = matchCharacter(characters, primaryDomain, primarySubbranch);
+                        return char ? (
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-700 font-semibold bg-slate-50/90 px-2.5 py-1 rounded-xl border border-slate-200/60 mt-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            <span className="text-[#00215C] font-bold">{char.name}</span>
+                            <span className="text-slate-400">·</span>
+                            <span className="text-slate-500 font-medium truncate">{char.role}</span>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
 
                     <div className="flex items-center justify-end mt-4 pt-3 border-t border-slate-100 text-slate-400 group-hover:text-[#255CC1] transition-colors text-xs font-semibold gap-1">

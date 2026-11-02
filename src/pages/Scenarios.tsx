@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Scenario, Session, CefrLevel } from '../lib/database.types';
+import { Scenario, Session, CefrLevel, Character } from '../lib/database.types';
 import { SESSION_DURATIONS } from '../constants/interview';
 import { ActiveScenarioSession } from './scenarios/ActiveScenarioSession';
 import { 
@@ -22,6 +22,7 @@ import {
 import { useKillSwitch } from '../hooks/useKillSwitch';
 import { TabUnavailableBanner } from '../components/layout/TabUnavailableBanner';
 import { getFallbackScenarioPhrases, getFallbackScenarioSentences } from '../constants/scenarioFallbacks';
+import { fetchActiveCharacters, matchCharacter } from '../services/characterService';
 
 type ScenariosTrackTab = 'all' | 'domain' | 'daily_life';
 type ScenariosView = 'list' | 'detail' | 'session';
@@ -51,12 +52,19 @@ function getScenarioPhrases(sc: Scenario): Array<{ german: string; english: stri
       raw = getFallbackScenarioPhrases(sc?.title || '');
     }
 
-    return (raw || [])
+    const filtered = (raw || [])
       .map((p: any) => {
         if (typeof p === 'string') return { german: p, english: '' };
         return { german: p?.german || '', english: p?.english || '' };
       })
       .filter((p: any) => Boolean(p.german));
+
+    return filtered.sort((a, b) => {
+      const aWords = a.german.trim().split(/\s+/).filter(Boolean).length;
+      const bWords = b.german.trim().split(/\s+/).filter(Boolean).length;
+      if (aWords !== bWords) return aWords - bWords;
+      return a.german.trim().length - b.german.trim().length;
+    });
   } catch {
     return [];
   }
@@ -107,8 +115,14 @@ export const Scenarios: React.FC = () => {
   const [domainScenarios, setDomainScenarios] = useState<Scenario[]>([]);
   const [allDomainScenarios, setAllDomainScenarios] = useState<Scenario[]>([]);
   const [dailyScenarios, setDailyScenarios] = useState<Scenario[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+
+  // Fetch active domain characters
+  useEffect(() => {
+    fetchActiveCharacters().then(setCharacters);
+  }, []);
 
   // Incomplete session for selected scenario
   const [incompleteSession, setIncompleteSession] = useState<Session | null>(null);
@@ -396,6 +410,7 @@ export const Scenarios: React.FC = () => {
     const isTailoredSubbranch = Boolean(primarySubbranch && sc.sub_branch === primarySubbranch);
     const phrases = getScenarioPhrases(sc);
     const previewPhrase = phrases[0] || null;
+    const char = matchCharacter(characters, sc.parent_domain, sc.sub_branch);
 
     return (
       <div
@@ -441,6 +456,16 @@ export const Scenarios: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Character partner badge */}
+          {char && (
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-700 font-semibold bg-slate-50/90 px-2.5 py-1 rounded-xl border border-slate-200/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="text-[#00215C] font-bold">{char.name}</span>
+              <span className="text-slate-400">·</span>
+              <span className="text-slate-500 font-medium truncate">{char.role}</span>
+            </div>
+          )}
 
           {/* Scenario Title & Description */}
           <div>
@@ -507,6 +532,7 @@ export const Scenarios: React.FC = () => {
     return (
       <ActiveScenarioSession
         scenario={selectedScenario}
+        character={matchCharacter(characters, selectedScenario.parent_domain, selectedScenario.sub_branch)}
         mode={selectedMode}
         durationMinutes={selectedDuration}
         initialSessionId={incompleteSession?.id || null}

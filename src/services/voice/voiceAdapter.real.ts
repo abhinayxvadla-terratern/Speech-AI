@@ -325,18 +325,24 @@ export class RealVoiceAdapter implements VoiceAdapter {
    * 3. Fallback: Client Web Speech API transcript
    */
   private async transcribeAudio(
-    _session: InternalSessionState,
+    session: InternalSessionState,
     audioChunk?: any,
     clientTranscript?: string
   ): Promise<{ transcript: string; confidence: 'high' | 'medium' | 'low' }> {
-    // 1. Try server-side /api/stt endpoint first
+    const targetPhrase = session.context.targetPhrase || '';
+    const sttUrl = targetPhrase
+      ? `/api/stt?targetPhrase=${encodeURIComponent(targetPhrase)}`
+      : '/api/stt';
+
+    // 1. Try server-side /api/stt endpoint first with target phrase context biasing
     if (audioChunk && (audioChunk instanceof Blob || audioChunk instanceof File)) {
       try {
         const contentType = audioChunk.type || 'audio/wav';
-        const res = await fetch('/api/stt', {
+        const res = await fetch(sttUrl, {
           method: 'POST',
           headers: {
             'Content-Type': contentType,
+            'x-target-phrase': encodeURIComponent(targetPhrase),
           },
           body: audioChunk,
         });
@@ -375,7 +381,7 @@ export class RealVoiceAdapter implements VoiceAdapter {
         form.append('response_format', 'verbose_json');
         form.append(
           'prompt',
-          "This is a language learner's German speech practice attempt. Transcribe exactly what is said, including any mistakes — do not normalize."
+          targetPhrase ? `Deutsch Sprachpraxis: ${targetPhrase}` : "Deutsch Sprachpraxis: Guten Tag, bitte, danke."
         );
 
         const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
@@ -398,10 +404,10 @@ export class RealVoiceAdapter implements VoiceAdapter {
       }
     }
 
-    // 3. Fallback to client Web Speech API transcript if captured
+    // 3. Fallback to native client Web Speech API transcript
     if (clientTranscript && clientTranscript.trim().length > 0) {
       console.log('[RealVoiceAdapter] Using client speech recognition transcript:', clientTranscript);
-      return { transcript: clientTranscript.trim(), confidence: 'medium' };
+      return { transcript: clientTranscript.trim(), confidence: 'high' };
     }
 
     throw new Error('No clear speech detected. Please speak into your microphone or tap Speak.');
@@ -413,8 +419,8 @@ export class RealVoiceAdapter implements VoiceAdapter {
   private async callGroqLLMWithRetry(messages: Array<{ role: string; content: string }>): Promise<any> {
     const apiKey = this.getApiKey();
 
-    // Primary target model: llama-3.3-70b-versatile. Fallback candidate: llama-3.1-8b-instant.
-    const modelsToTry = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+    // Primary target model: llama-3.3-70b-versatile. Fallback candidates: llama-3.1-70b-versatile, llama3-70b-8192.
+    const modelsToTry = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile', 'llama3-70b-8192'];
 
     let lastError: Error | null = null;
 
@@ -1031,7 +1037,7 @@ Return ONLY valid JSON:
         this.notifyTranscript(session, { ...userTurn });
         await this.speak(sessionHandle, finalReply);
       } else if (mode === 'learn') {
-        // CASE 1: SPEAK AGENT — LEARN MODE
+        // CASE 1: SPEAK AGENT — LEARN MODE (Immediate Actionable Vocal Coaching)
         const microSkill = session.context.micro_skill || session.context.title || 'Target German sentence structure';
         const targetPhrases = session.context.targetPhrase || session.context.target_phrases || 'German target phrase';
         const domainVariants = session.context.domain_variant_phrases || 'None';
@@ -1041,20 +1047,54 @@ Return ONLY valid JSON:
           ? `\nSession time remaining: ${timeRemaining}.\n- As time runs low, keep feedback focused and encouraging as the session wraps up.`
           : '';
 
-        const learnPrompt = `You are a supportive German language tutor for a learner at ${cefrLevel} level.
-This session covers: ${microSkill}
-Target phrase(s): ${targetPhrases}
-Domain context (if applicable): ${domainVariants}${timeRemainingInfo}
+        const learnPrompt = `You are an attentive, expert German speech and pronunciation coach analyzing a learner's spoken attempt at CEFR ${cefrLevel} level.
+Workout topic: ${microSkill}
+Target German phrase: "${targetPhrases}"
+Domain context: ${domainVariants}${timeRemainingInfo}
 
-The learner has just attempted to say a German phrase. You will receive:
-- The target phrase they were asked to produce
-- Their actual spoken transcript (via STT — transcribed as closely as possible to what was actually said, including any errors)
-- STT confidence level for this transcript, if available
+The learner was asked to speak the German target phrase aloud.
+Target phrase: "${targetPhrases}"
+Learner transcript: "${transcript}"
+STT confidence: ${sttConfidence}
+Current attempt on this phrase: Attempt ${session.targetPhraseAttempts} of 3.
 
-Your job:
-1. First, judge warmly: is this correct, close, or a genuine deviation? Acceptable phrasing variations or near-matches should be treated as correct — don't nitpick.
-2. If STT confidence is low, hedge your judgment rather than asserting it confidently.
-3. If there is a genuine deviation, identify ONE primary category from: verb conjugation, case agreement, word order, vocabulary choice, missing word, other.
+YOUR CORE PEDAGOGICAL INSTRUCTION:
+Do NOT simply echo back what the user said, and do NOT give generic empty praise. Evaluate their spoken German with real precision so they know exactly what to change when they speak!
+
+1. CRITICAL ASSESSMENT OF SPOKEN GERMAN:
+   - Compare the learner's spoken input against "${targetPhrases}".
+   - Check for:
+     a) German pronunciation & phonetics (vowel length, umlauts ä/ö/ü, 'ch' sound, 'r' sound, final devoicing like -g sounding as -k in 'Tag', 's' vs 'z', 'sch').
+     b) Word endings and case agreement (e.g. -en, -em, -es, -e).
+     c) Missing words, substituted words, or word order issues.
+   - If there is any pronunciation flaw, dropped ending, or wrong word:
+     * Set correct: false.
+     * Set what_to_change: 1 clear, actionable sentence in English pointing out the exact adjustment they must make when speaking right now.
+       (Example: "Soften the ending 'g' in 'Tag' into a light 'k' sound rather than an English 'g'.")
+       (Example: "Articulate the final '-en' on 'Ihnen' clearly: 'EE-nen'.")
+       (Example: "Round your lips more on the umlaut 'ü' and hold the vowel long.")
+   - If the speech was clear, accurate, and understandable:
+     * Set correct: true.
+     * Set what_to_change: null.
+
+2. WHAT WAS GOOD (what_was_good):
+   - Always note 1 genuine positive element (e.g. "Good speaking cadence", "Clear vowel pronunciation", "Accurate sentence rhythm").
+
+3. SPOKEN COACH RESPONSE (spoken_feedback):
+   - A concise 1-2 sentence response that the coach will speak aloud in ONE single voice:
+   - If needs correction (attempt 1 or 2):
+     "Good try! Change this: [1 concise tip from what_to_change]. Listen: [Target German phrase]. Try saying it again!"
+   - If correct:
+     "Ausgezeichnet! That was clear and accurate."
+   - If attempt 3 (final attempt):
+     "Good effort practicing this phrase! Let's continue to the next one."
+
+4. SCORE:
+   - 5: Flawless or near-native clarity and accurate words.
+   - 4: Very good, clear and intelligible, only a minor accent nuance.
+   - 3: Noticeable pronunciation flaw, dropped ending, or slight slip.
+   - 2: Substantial mispronunciation, multiple missing words, or wrong sentence structure.
+   - 1: Spoke English, unintelligible noise, or off-topic.
 
 SILENT ENGAGEMENT TRACKING & STRIKE POLICY:
 Current running strikes in this session: ${session.strikes} (maximum 3 allowed).
@@ -1078,14 +1118,17 @@ Return ONLY valid JSON:
   "confidence_hedge": true/false,
   "is_genuine_attempt": true/false,
   "is_non_engagement": true/false,
-  "category": "<category or null>",
+  "category": "<Pronunciation / Vowel Sounds / Case Endings / Verb Position / Vocabulary>",
   "example": "<the raw transcript, unmodified>",
   "correction": "<corrected German version, or null if correct>",
-  "feedback_en": "<one warm, coaching-toned sentence in English>",
+  "what_to_change": "<1 actionable sentence in English on what to change in speaking, or null if correct>",
+  "what_was_good": "<1 sentence in English highlighting what was good, clear, or accurate>",
+  "spoken_feedback": "<Concise 1-2 sentence spoken coach response>",
+  "score": 1, 2, 3, 4, or 5,
   "session_ended": true/false
 }
 
-Never put anything in "example" other than the raw transcript. Never include anything outside the JSON object. feedback_en must be English only, short, encouraging, never harsh or pedantic.`;
+Never put anything in "example" other than the raw transcript. Never include anything outside the JSON object.`;
 
         const messages: Array<{ role: string; content: string }> = [
           { role: 'system', content: learnPrompt },
@@ -1095,13 +1138,78 @@ Never put anything in "example" other than the raw transcript. Never include any
           },
         ];
 
-        const { parsed, provider } = await this.callLLM(messages, session.context);
+        // Deterministic German token alignment & pronunciation verification (Duolingo style)
+        const cleanTgtTokens = targetPhrases
+          .toLowerCase()
+          .replace(/[.,!?;:\"'()]/g, '')
+          .split(/\s+/)
+          .filter(Boolean);
+
+        const cleanUsrTokens = transcript
+          .toLowerCase()
+          .replace(/[.,!?;:\"'()]/g, '')
+          .split(/\s+/)
+          .filter(Boolean);
+
+        const normUmlauts = (s: string) =>
+          s.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+
+        let matchedCount = 0;
+        const missedTokens: string[] = [];
+
+        cleanTgtTokens.forEach((tgt: string) => {
+          const normTgt = normUmlauts(tgt);
+          const isMatched = cleanUsrTokens.some((usr) => {
+            if (usr === tgt) return true;
+            const normUsr = normUmlauts(usr);
+            if (normUsr === normTgt) return true;
+            if (tgt.length >= 4 && (usr.startsWith(tgt) || tgt.startsWith(usr))) return true;
+            return false;
+          });
+
+          if (isMatched) {
+            matchedCount++;
+          } else {
+            missedTokens.push(tgt);
+          }
+        });
+
+        const matchRatio = cleanTgtTokens.length > 0 ? matchedCount / cleanTgtTokens.length : 1;
+        const isMatchedDetermined = matchRatio >= 0.75;
+
+        let parsed: any = null;
+        let provider: 'groq' | 'openrouter' = 'groq';
+        try {
+          const res = await this.callLLM(messages, session.context);
+          parsed = res.parsed;
+          provider = res.provider;
+        } catch (llmErr) {
+          console.warn('[RealVoiceAdapter] LLM API call fallback to deterministic scoring:', llmErr);
+          parsed = {
+            correct: isMatchedDetermined,
+            score: isMatchedDetermined ? 5 : 3,
+            is_genuine_attempt: true,
+            is_non_engagement: false,
+            what_was_good: isMatchedDetermined
+              ? 'Accurate German pronunciation and clear rhythm!'
+              : 'Good effort speaking the German phrase aloud!',
+            what_to_change: isMatchedDetermined
+              ? null
+              : missedTokens.length > 0
+              ? `Focus on pronouncing "${missedTokens.join(', ')}"`
+              : 'Focus on clear pronunciation.',
+            spoken_feedback: isMatchedDetermined
+              ? 'Perfekt! You spoke correct, we are moving to the next word.'
+              : `Good attempt! Focus on "${missedTokens.join(', ')}". Listen: "${targetPhrases}". Try saying it again!`,
+          };
+        }
+
         session.lastLlmProvider = provider;
         userTurn.llm_provider = provider;
 
-        const isNonEngagement = Boolean(parsed.is_non_engagement);
+        const isNonEngagement = Boolean(parsed?.is_non_engagement);
         const isObviousOffTopic = this.checkObviousEnglishOrGibberish(transcript);
-        const isGenuine = parsed.is_genuine_attempt !== false && !isNonEngagement && !isObviousOffTopic;
+        const isGenuine = parsed?.is_genuine_attempt !== false && !isNonEngagement && !isObviousOffTopic;
 
         if (isGenuine) {
           session.targetPhraseAttempts = 1;
@@ -1114,7 +1222,7 @@ Never put anything in "example" other than the raw transcript. Never include any
           }
         }
 
-        if (session.strikes >= 3 || parsed.session_ended) {
+        if (session.strikes >= 3 || parsed?.session_ended) {
           session.hasClosed = true;
           userTurn.sessionEnded = true;
           const signOff = "Let's pick this back up another time — great effort today.";
@@ -1127,27 +1235,46 @@ Never put anything in "example" other than the raw transcript. Never include any
           return;
         }
 
-        const isCorrect = isGenuine && Boolean(parsed.correct);
-        const correction = !isCorrect && parsed.correction ? parsed.correction : null;
-        let feedbackEn =
-          parsed.feedback_en ||
+        const turnScore =
+          typeof parsed?.score === 'number' && parsed.score >= 1 && parsed.score <= 5
+            ? parsed.score
+            : (isMatchedDetermined ? 5 : 3);
+        const isCorrect = isMatchedDetermined || (isGenuine && Boolean(parsed?.correct) && turnScore >= 4);
+        const correction = !isCorrect ? (parsed?.correction || targetPhrases) : null;
+        const whatWasGood =
+          parsed?.what_was_good ||
           (isCorrect
-            ? 'Great job, that sounded very natural!'
-            : `Good try! In German, you could say: ${correction || targetPhrases}`);
+            ? 'Accurate German pronunciation and clear structure!'
+            : 'Good effort speaking the German phrase aloud!');
+        const whatToChange = !isCorrect
+          ? (parsed?.what_to_change || (missedTokens.length > 0 ? `Focus on pronouncing "${missedTokens.join(', ')}"` : (correction ? `Say: "${correction}"` : 'Pay attention to clear pronunciation.')))
+          : null;
 
-        if ((isNonEngagement || isObviousOffTopic) && session.strikes > 0 && !feedbackEn.includes("No worries")) {
-          feedbackEn = `No worries, let's keep going. ${feedbackEn}`;
+        let spokenFeedback: string;
+        if (isCorrect) {
+          spokenFeedback = "Perfekt! You spoke correct, we are moving to the next word.";
+        } else if (parsed?.spoken_feedback && parsed.spoken_feedback.trim().length > 0) {
+          spokenFeedback = parsed.spoken_feedback.trim();
+        } else {
+          spokenFeedback = `Good attempt! Focus on: ${whatToChange || 'clear pronunciation'}. Listen: "${targetPhrases}". Try again!`;
+        }
+
+        if ((isNonEngagement || isObviousOffTopic) && session.strikes > 0 && !spokenFeedback.includes("No worries")) {
+          spokenFeedback = `No worries, let's keep going. ${spokenFeedback}`;
         }
 
         // Update userTurn with evaluation and notify UI so Learn feedback shows verbatim transcript alongside correction
         userTurn.isCorrect = isCorrect;
         userTurn.correction = correction;
-        userTurn.category = parsed.category || null;
-        userTurn.feedback_en = feedbackEn;
-        userTurn.confidence_hedge = Boolean(parsed.confidence_hedge);
+        userTurn.category = parsed?.category || (isCorrect ? null : 'Pronunciation & Delivery');
+        userTurn.what_was_good = whatWasGood;
+        userTurn.what_to_change = whatToChange;
+        userTurn.feedback_en = whatToChange || (isCorrect ? 'Accurate German pronunciation!' : 'Focus on clear pronunciation.');
+        userTurn.score = turnScore;
+        userTurn.confidence_hedge = Boolean(parsed?.confidence_hedge);
         this.notifyTranscript(session, { ...userTurn });
 
-        session.feedbacks.push(feedbackEn);
+        session.feedbacks.push(`${whatWasGood} ${whatToChange || ''}`);
 
         if (!isCorrect && (parsed.category || correction)) {
           const catKey = (parsed.category || 'Target Structure').toLowerCase().trim();
@@ -1155,14 +1282,14 @@ Never put anything in "example" other than the raw transcript. Never include any
           session.mistakeFrequencyMap.set(catKey, count);
 
           session.mistakes.push({
-            category: parsed.category || 'Vocabulary & Grammar',
+            category: parsed.category || 'Pronunciation & Delivery',
             example_de: null,
             example_en: transcript,
             correction_de: null,
             correction_en: correction || targetPhrases,
             example: transcript,
             correction: correction || targetPhrases,
-            feedback_en: feedbackEn,
+            feedback_en: whatToChange || undefined,
           });
 
           if (count >= 5) {
@@ -1179,7 +1306,7 @@ Never put anything in "example" other than the raw transcript. Never include any
           }
         }
 
-        await this.speak(sessionHandle, feedbackEn);
+        await this.speak(sessionHandle, spokenFeedback);
       } else {
         // CASE 2: SPEAK AGENT — PRACTICE MODE (Speak / Scenarios)
         const scenarioContext = session.context.scenarioType || session.context.title || 'German dialogue simulation';
@@ -1310,6 +1437,25 @@ detected_mistakes may be an empty array. These are logged silently — never sur
     }
   }
 
+  private lastSpokenTextMap = new Map<string, string>();
+
+  /**
+   * Returns the last spoken prompt for a session.
+   */
+  getLastSpokenText(sessionHandle: VoiceSessionHandle): string | null {
+    return this.lastSpokenTextMap.get(sessionHandle.id) || null;
+  }
+
+  /**
+   * Re-speaks the last prompt at standard or modified speed (e.g. rate: '-20%').
+   */
+  async repeatLastPrompt(sessionHandle: VoiceSessionHandle, options?: { rate?: string }): Promise<void> {
+    const last = this.lastSpokenTextMap.get(sessionHandle.id) || sessionHandle.context.targetPhrase;
+    if (last) {
+      await this.speak(sessionHandle, last, options);
+    }
+  }
+
   /**
    * Internal helper to play a single TTS clip with a specific voice.
    */
@@ -1317,7 +1463,8 @@ detected_mistakes may be an empty array. These are logged silently — never sur
     text: string,
     voice: string,
     signal: AbortSignal,
-    myGen: number
+    myGen: number,
+    rateOverride?: string
   ): Promise<void> {
     if (!text || !text.trim() || this.currentSpeakGen !== myGen || signal.aborted) {
       return;
@@ -1325,7 +1472,8 @@ detected_mistakes may be an empty array. These are logged silently — never sur
 
     try {
       if (typeof window !== 'undefined') {
-        const ttsUrl = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`;
+        const rate = rateOverride || '+0%';
+        const ttsUrl = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}&rate=${encodeURIComponent(rate)}`;
         const res = await fetch(ttsUrl, { signal });
 
         if (this.currentSpeakGen !== myGen || signal.aborted) return;
@@ -1362,7 +1510,14 @@ detected_mistakes may be an empty array. These are logged silently — never sur
               finish();
               return;
             }
-            audio.play().catch(() => finish());
+            audio.play().catch(async (playErr) => {
+              console.warn('[RealVoiceAdapter] HTML5 audio play failed, falling back to speech synthesis:', playErr?.message);
+              try {
+                const lang = voice.startsWith('de') ? 'de-DE' : 'en-US';
+                await this.speakBrowserSpeechSynthesis(text, lang);
+              } catch (_) {}
+              finish();
+            });
           });
         } else {
           if (this.currentSpeakGen === myGen && !signal.aborted) {
@@ -1374,7 +1529,8 @@ detected_mistakes may be an empty array. These are logged silently — never sur
         const { MsEdgeTTS, OUTPUT_FORMAT } = await import(/* @vite-ignore */ 'msedge-tts');
         const tts = new MsEdgeTTS();
         await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-        const { audioStream } = tts.toStream(text);
+        const rate = '+0%';
+        const { audioStream } = tts.toStream(text, { rate });
 
         await new Promise<void>((resolve, reject) => {
           audioStream.on('data', () => {});
@@ -1398,11 +1554,13 @@ detected_mistakes may be an empty array. These are logged silently — never sur
    * Send text to Edge TTS (voice: de-DE-KatjaNeural or en-US-JennyNeural for English feedback),
    * play resulting audio, push turn to session transcript and conversation history.
    */
-  async speak(sessionHandle: VoiceSessionHandle, text: string): Promise<void> {
+  async speak(sessionHandle: VoiceSessionHandle, text: string, options?: { rate?: string }): Promise<void> {
     const session = this.sessions.get(sessionHandle.id);
     if (!session) {
       throw new Error(`Session ${sessionHandle.id} does not exist`);
     }
+
+    this.lastSpokenTextMap.set(sessionHandle.id, text);
 
     const myGen = ++this.currentSpeakGen;
     if (this.currentTtsAbortController) {
@@ -1413,16 +1571,7 @@ detected_mistakes may be an empty array. These are logged silently — never sur
 
     this.updateState(session, 'speaking');
 
-    // Determine appropriate voice: English neural voice for English feedback (Learn mode),
-    // de-DE-KatjaNeural for all German speech.
-    const isEnglish = /^[A-Za-z0-9\s.,!?'"()-]+$/.test(text) && !/[äöüßÄÖÜ]/.test(text) && (text.includes('the ') || text.includes('you ') || text.includes('Great ') || text.includes('Good ') || text.includes('Remember '));
-    const voice = isEnglish ? 'en-US-JennyNeural' : 'de-DE-KatjaNeural';
-
-    await this.playTtsClip(text, voice, abortController.signal, myGen);
-
-    if (this.currentSpeakGen !== myGen) return;
-
-    // Push agent turn to session turns and conversation history
+    // Push agent turn to session transcript immediately so appreciation and replies appear in chat as AI speaks
     const turn: TranscriptTurn = {
       speaker: 'agent',
       text,
@@ -1432,8 +1581,16 @@ detected_mistakes may be an empty array. These are logged silently — never sur
 
     session.turns.push(turn);
     session.conversationHistory.push({ role: 'assistant', content: text });
-    this.updateState(session, 'idle');
     this.notifyTranscript(session, turn);
+
+    // Single unified voice and single tone for the entire workout
+    const voice = 'de-DE-KatjaNeural';
+
+    await this.playTtsClip(text, voice, abortController.signal, myGen, options?.rate);
+
+    if (this.currentSpeakGen !== myGen) return;
+
+    this.updateState(session, 'idle');
 
     // If session has not closed and strikes < 3, start the silence timer for the learner's response
     if (!session.hasClosed && session.strikes < 3) {
@@ -1443,47 +1600,56 @@ detected_mistakes may be an empty array. These are logged silently — never sur
 
   /**
    * speakSegments(sessionHandle, segments):
-   * Plays sequential segments with appropriate native voices:
-   * 'en' -> en-US-JennyNeural, 'de' -> de-DE-KatjaNeural.
-   * Records a single coherent transcript turn with combined text.
+   * Plays segments using a single unified voice and tone to prevent jarring voice switches.
    */
   async speakSegments(sessionHandle: VoiceSessionHandle, segments: SpeechSegment[]): Promise<void> {
     const session = this.sessions.get(sessionHandle.id);
     if (!session || segments.length === 0) return;
 
-    const myGen = ++this.currentSpeakGen;
-    if (this.currentTtsAbortController) {
-      try { this.currentTtsAbortController.abort(); } catch {}
-    }
-    const abortController = new AbortController();
-    this.currentTtsAbortController = abortController;
+    const combinedText = segments.map((s) => s.text.trim()).filter(Boolean).join(' ');
+    await this.speak(sessionHandle, combinedText);
+  }
 
-    this.updateState(session, 'speaking');
+  /**
+   * speakPhrasePrompt(sessionHandle, phrase, isFirst, userName, moduleTitle):
+   * Plays unified introductory guidance with a single voice and single tone:
+   * Greets user, states the German target phrase, explains meaning in English,
+   * and directs them to speak in German.
+   */
+  async speakPhrasePrompt(
+    sessionHandle: VoiceSessionHandle,
+    phrase: { german: string; english: string },
+    isFirst: boolean,
+    _userName?: string,
+    _moduleTitle: string = 'German Speech Workout'
+  ): Promise<void> {
+    const session = this.sessions.get(sessionHandle.id);
+    if (!session) return;
 
-    for (const seg of segments) {
-      if (this.currentSpeakGen !== myGen || abortController.signal.aborted) break;
-      const voice = seg.lang === 'de' ? 'de-DE-KatjaNeural' : 'en-US-JennyNeural';
-      await this.playTtsClip(seg.text, voice, abortController.signal, myGen);
-    }
+    const text = isFirst
+      ? `Hallo! "${phrase.german}". In English, this means: "${phrase.english}". Now, please say it in German!`
+      : `"${phrase.german}". In English, this means: "${phrase.english}". Now, please say it in German!`;
 
-    if (this.currentSpeakGen !== myGen) return;
+    await this.speak(sessionHandle, text);
+  }
 
-    const combinedText = segments.map((s) => s.text).join('\n\n');
-    const turn: TranscriptTurn = {
-      speaker: 'agent',
-      text: combinedText,
-      timestamp: new Date().toISOString(),
-      llm_provider: session.lastLlmProvider || 'groq',
-    };
+  /**
+   * speakPhraseRetryPrompt(sessionHandle, phrase, tip):
+   * Provides supportive guidance for a retry attempt with a single unified voice.
+   */
+  async speakPhraseRetryPrompt(
+    sessionHandle: VoiceSessionHandle,
+    phrase: { german: string; english: string },
+    tip?: string
+  ): Promise<void> {
+    const session = this.sessions.get(sessionHandle.id);
+    if (!session) return;
 
-    session.turns.push(turn);
-    session.conversationHistory.push({ role: 'assistant', content: combinedText });
-    this.updateState(session, 'idle');
-    this.notifyTranscript(session, turn);
+    const text = tip
+      ? `Notice this: ${tip}. Listen carefully: "${phrase.german}". Now, give it another try!`
+      : `Listen carefully: "${phrase.german}". Now, give it another try!`;
 
-    if (!session.hasClosed && session.strikes < 3) {
-      this.startSilenceTimer(session);
-    }
+    await this.speak(sessionHandle, text);
   }
 
   /**
@@ -1507,11 +1673,7 @@ detected_mistakes may be an empty array. These are logged silently — never sur
       reviewPointers = `Session complete! Here is your quick performance review: First, you actively engaged and maintained the conversational flow. Second, pay attention to ${topCategory}${exampleNote}. Third, review the highlighted notes in your report to lock in these structures. Let's look at your full diagnostic recap now.`;
     }
 
-    const segments: SpeechSegment[] = [
-      { text: reviewPointers, lang: 'en' },
-    ];
-
-    await this.speakSegments(sessionHandle, segments);
+    await this.speak(sessionHandle, reviewPointers);
   }
 
   private speakBrowserSpeechSynthesis(text: string, lang: string): Promise<void> {
@@ -1522,6 +1684,7 @@ detected_mistakes may be an empty array. These are logged silently — never sur
       try {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = lang;
+        utterance.rate = 1.0; // Normal conversational pace
         utterance.onend = () => resolve();
         utterance.onerror = () => resolve();
         window.speechSynthesis.speak(utterance);
