@@ -15,7 +15,6 @@ import { LearnLinguisticStage } from '../../components/voice/LearnLinguisticStag
 import { 
   ArrowLeft, 
   ArrowRight,
-  Sparkles, 
   CheckCircle2, 
   Loader2, 
   Volume2, 
@@ -551,14 +550,6 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
     });
   }, [currentPhrase, activeSpokenText, currentPhraseUserTurn]);
 
-  const missedWords = useMemo(() => {
-    return wordAlignment.filter((w) => w.status === 'missed');
-  }, [wordAlignment]);
-
-  const allWordsMatched = useMemo(() => {
-    return wordAlignment.length > 0 && wordAlignment.every((w) => w.status === 'matched');
-  }, [wordAlignment]);
-
   // Scroll internal chat stream to bottom when turns or live speech updates without moving the page
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -786,34 +777,18 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
             ) : (
               <Square className="w-3 h-3 fill-white" />
             )}
-            <span>Complete Workout</span>
+            <span>Finish</span>
           </button>
         </header>
 
         {/* Target Phrase Stepper Stage (Learn Mode) - Pinned in view */}
         {mode === 'learn' && currentPhrase && (
-          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2 relative overflow-hidden">
             {/* Stepper bar */}
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
-                  <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-                  Phrase {currentPhraseIndex + 1} of {targetPhrases.length}
-                </span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  phraseAttempts === 1
-                    ? 'bg-blue-50 text-[#255CC1] border-blue-200'
-                    : phraseAttempts === 2
-                    ? 'bg-amber-50 text-amber-800 border-amber-200 animate-pulse'
-                    : 'bg-rose-50 text-rose-800 border-rose-200 animate-pulse'
-                }`}>
-                  {phraseAttempts === 1
-                    ? 'Attempt 1 of 3'
-                    : phraseAttempts === 2
-                    ? 'Attempt 2 of 3 • Try Again ↺'
-                    : 'Attempt 3 of 3 • Final Try'}
-                </span>
-              </div>
+              <span className="font-bold text-[#255CC1] uppercase tracking-wider text-[11px]">
+                Phrase {currentPhraseIndex + 1} of {targetPhrases.length}
+              </span>
               <span className="font-semibold text-slate-500 text-[11px]">
                 {Math.round(((currentPhraseIndex + 1) / targetPhrases.length) * 100)}%
               </span>
@@ -828,7 +803,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
 
             {/* Clean German Target Typography (Color Highlights, No Capsules) */}
             <div className="py-1 space-y-1">
-              <div className="text-xl sm:text-2xl md:text-3xl font-heading font-extrabold tracking-tight leading-relaxed select-none">
+              <div className="text-xl sm:text-2xl font-heading font-extrabold tracking-tight leading-relaxed select-none">
                 {wordAlignment.map((token, wIdx) => {
                   const colorClass =
                     token.status === 'matched'
@@ -857,25 +832,6 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
                   />
                 </div>
               )}
-
-              {/* Targeted Word Focus Alert */}
-              {missedWords.length > 0 && currentPhraseUserTurn && !currentPhraseUserTurn.isCorrect && (
-                <div className="p-2 rounded-xl bg-amber-50/90 border border-amber-200 text-amber-950 flex items-start gap-2 text-xs shadow-2xs animate-fadeIn">
-                  <span className="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-bold uppercase text-[10px] shrink-0 mt-0.5">
-                    Word Focus:
-                  </span>
-                  <span className="font-semibold leading-relaxed">
-                    Focus on pronouncing {missedWords.map((w) => `"${w.word}"`).join(', ')} clearly — {currentPhraseUserTurn.what_to_change || 'try reciting the phrase again!'}
-                  </span>
-                </div>
-              )}
-
-              {allWordsMatched && currentPhraseUserTurn && (
-                <div className="p-2 rounded-xl bg-emerald-50/90 border border-emerald-200 text-emerald-950 flex items-center gap-2 text-xs font-bold animate-fadeIn shadow-2xs">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Ausgezeichnet! All words matched cleanly.</span>
-                </div>
-              )}
             </div>
 
             {/* Action controls for current phrase */}
@@ -888,7 +844,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
                   }
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#255CC1] text-xs font-semibold transition-colors cursor-pointer"
-                title="Listen to German pronunciation at normal speed"
+                title="Listen to German pronunciation"
               >
                 <Volume2 className="w-3.5 h-3.5" />
                 <span>Listen Again</span>
@@ -898,14 +854,10 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
                 <button
                   type="button"
                   onClick={handleAdvancePhrase}
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
-                    phraseAttempts >= 2
-                      ? 'bg-gradient-to-r from-[#00215C] to-[#255CC1] hover:from-[#143471] hover:to-[#1a4bb0] text-white ring-2 ring-blue-300'
-                      : 'bg-[#00215C] hover:bg-[#143471] text-white'
-                  }`}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#00215C] hover:bg-[#143471] text-white text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
                   title="Move to the next phrase"
                 >
-                  <span>{phraseAttempts >= 3 ? 'Try Next Word' : 'Next Word'}</span>
+                  <span>Next Phrase</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               ) : (
@@ -915,7 +867,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Finish Workout</span>
+                  <span>Finish</span>
                 </button>
               )}
             </div>
@@ -973,7 +925,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
               return (
                 <div key={idx} className="flex items-start gap-3 justify-start max-w-[85%] sm:max-w-[78%] animate-fadeIn">
                   <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs bg-white border border-slate-200/90 p-1 overflow-hidden">
-                    <AppLogo size={26} alt="AI Coach" />
+                    <AppLogo size={26} alt="German Speech Coach" />
                   </div>
                   <div className="p-3 sm:p-3.5 rounded-2xl rounded-tl-xs bg-white text-slate-800 border border-slate-200/90 shadow-xs text-xs sm:text-sm leading-relaxed">
                     <p className="font-medium text-slate-800">{turn.text}</p>
@@ -1007,7 +959,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
                     {turn.what_to_change && (
                       <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-950 flex items-start gap-2 shadow-2xs">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded shrink-0 mt-0.5">
-                          Change this:
+                          Trainer Tip:
                         </span>
                         <span className="text-xs font-semibold leading-relaxed break-words">
                           {turn.what_to_change}
@@ -1015,30 +967,11 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
                       </div>
                     )}
 
-                    {/* What Was Good banner */}
-                    {turn.what_was_good && (
-                      <div className="p-2 rounded-lg bg-emerald-50/80 border border-emerald-200/80 flex items-start gap-2 shadow-2xs">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded shrink-0">
-                          What was good:
-                        </span>
-                        <span className="text-emerald-950 font-medium text-xs break-words">
-                          {turn.what_was_good}
-                        </span>
-                      </div>
-                    )}
-
                     {/* Accurate state banner */}
                     {turn.isCorrect && (
-                      <div className="p-2 rounded-lg bg-emerald-50/90 border border-emerald-200 text-emerald-950 flex items-center justify-between gap-2 shadow-2xs">
-                        <div className="flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          <span className="font-semibold text-xs">Ausgezeichnet! Clean German pronunciation</span>
-                        </div>
-                        {typeof turn.score === 'number' && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            Score: {turn.score}/5
-                          </span>
-                        )}
+                      <div className="p-2 rounded-lg bg-emerald-50/90 border border-emerald-200 text-emerald-950 flex items-center gap-1.5 shadow-2xs">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="font-semibold text-xs">Sehr gut! Clean German pronunciation</span>
                       </div>
                     )}
                   </div>

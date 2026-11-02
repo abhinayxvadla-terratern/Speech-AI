@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RotateCcw, Snail, Lightbulb, X, Sparkles } from 'lucide-react';
+import { RotateCcw, Volume1, BookOpen, X } from 'lucide-react';
 
 export interface VoiceTurnControlsProps {
   onSlower: () => void;
@@ -36,10 +36,10 @@ export const VoiceTurnControls: React.FC<VoiceTurnControlsProps> = ({
         <div className="max-w-md w-full px-3 animate-fadeIn">
           <div className="p-2.5 rounded-2xl bg-amber-50/95 backdrop-blur-md border border-amber-200/90 shadow-sm text-xs text-amber-950 flex items-start justify-between gap-2">
             <div className="flex items-start gap-1.5 min-w-0">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+              <BookOpen className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
               <div className="min-w-0">
                 <span className="font-bold text-[10px] uppercase tracking-wider text-amber-800 block">
-                  Helpful Hint:
+                  Meaning & Context:
                 </span>
                 <p className="font-medium text-amber-950 leading-relaxed text-xs">
                   {hintText}
@@ -50,7 +50,7 @@ export const VoiceTurnControls: React.FC<VoiceTurnControlsProps> = ({
               type="button"
               onClick={() => setHintVisible(false)}
               className="p-1 rounded-md text-amber-600 hover:bg-amber-100 transition-colors cursor-pointer"
-              title="Close hint"
+              title="Close note"
             >
               <X className="w-3 h-3" />
             </button>
@@ -65,9 +65,9 @@ export const VoiceTurnControls: React.FC<VoiceTurnControlsProps> = ({
           onClick={onSlower}
           disabled={disabled}
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold text-slate-700 hover:text-[#00215C] hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          title="Play pronunciation slower at 0.8x speed"
+          title="Play pronunciation slowly"
         >
-          <Snail className="w-3 h-3 text-[#255CC1]" />
+          <Volume1 className="w-3.5 h-3.5 text-[#255CC1]" />
           <span>Slower</span>
         </button>
 
@@ -96,10 +96,10 @@ export const VoiceTurnControls: React.FC<VoiceTurnControlsProps> = ({
                   ? 'bg-amber-100 text-amber-900 shadow-2xs'
                   : 'text-slate-700 hover:text-amber-800 hover:bg-amber-50'
               }`}
-              title="View example phrase hint (Learn mode only)"
+              title="View sentence meaning"
             >
-              <Lightbulb className={`w-3 h-3 ${hintVisible ? 'text-amber-600 fill-amber-500' : 'text-amber-500'}`} />
-              <span>Hint</span>
+              <BookOpen className={`w-3 h-3 ${hintVisible ? 'text-amber-700' : 'text-slate-500'}`} />
+              <span>Meaning</span>
             </button>
           </>
         )}

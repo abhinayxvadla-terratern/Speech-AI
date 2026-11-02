@@ -16,7 +16,7 @@ import {
   BookOpen,
   ArrowLeft,
   Play,
-  Sparkles,
+  Volume2,
   Clock
 } from 'lucide-react';
 
@@ -287,7 +287,7 @@ export const Speak: React.FC = () => {
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold text-[#00215C] uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
+                <Volume2 className="w-3.5 h-3.5 text-[#255CC1]" />
                 Phrases in this Workout ({previewPhrases.length})
               </h2>
               <span className="text-[11px] text-slate-400 font-medium">Spoken 1-by-1</span>

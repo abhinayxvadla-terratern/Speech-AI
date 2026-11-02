@@ -23,7 +23,6 @@ import {
   AlertCircle,
   HelpCircle,
   Clock,
-  Sparkles,
   Square,
   X,
   Briefcase
@@ -596,24 +595,23 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
         <button
           onClick={handleFinishSession}
           disabled={isFinishing || turns.length === 0}
-          className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-[#00215C] text-white text-xs font-bold transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
+          className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-[#00215C] text-white text-xs font-bold transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0 cursor-pointer"
         >
           {isFinishing ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
             <Square className="w-3 h-3 fill-white" />
           )}
-          <span>Complete Interview</span>
+          <span>Finish</span>
         </button>
       </header>
 
       {/* Question Stepper Stage (Learn Mode) */}
       {mode === 'learn' && !isOpenInterview && currentQuestion && (
-        <div className="mb-4 p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-3 relative overflow-hidden animate-fadeIn">
+        <div className="mb-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden animate-fadeIn">
           {/* Stepper bar */}
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
-              <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
+            <span className="font-bold text-[#255CC1] uppercase tracking-wider text-[11px]">
               Question {currentQuestionIndex + 1} of {effectiveQuestions.length}
             </span>
             <div className="flex items-center gap-2">
@@ -705,8 +703,8 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
         <div className="mb-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden animate-fadeIn">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-              Professional German Interview Simulation
+              <Briefcase className="w-3.5 h-3.5 text-[#255CC1]" />
+              Professional German Job Interview Practice
             </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/60">
               {pressureMode} Pacing
@@ -718,7 +716,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-600 font-medium">
             <HelpCircle className="w-4 h-4 text-[#255CC1] shrink-0" />
             <span>
-              <strong>100% German Interview:</strong> The simulation is conducted entirely in formal German (Sie). Respond spontaneously. Full diagnostic review in English will be provided at the end.
+              <strong>100% German Interview:</strong> The conversation is conducted entirely in formal German (Sie). Respond naturally. Complete spoken evaluation in English will be provided at the end.
             </span>
           </div>
         </div>

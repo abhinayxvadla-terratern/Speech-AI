@@ -9,7 +9,7 @@ import {
   Calendar, 
   ArrowRight, 
   Play, 
-  Sparkles, 
+  BookOpen, 
   Clock, 
   TrendingDown, 
   Compass, 
@@ -241,7 +241,7 @@ export const Home: React.FC = () => {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white border border-white/20 backdrop-blur-xs shadow-2xs flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-blue-200" />
+              <BookOpen className="w-3 h-3 text-blue-200" />
               Today's Spoken Workout
             </span>
             {nextModule && (
@@ -250,7 +250,6 @@ export const Home: React.FC = () => {
               </span>
             )}
           </div>
-          <Sparkles className="w-4 h-4 text-blue-200/70" />
         </div>
 
         {allModulesCompleted ? (
@@ -284,7 +283,7 @@ export const Home: React.FC = () => {
               {nextModule.title}
             </h2>
             <p className="text-xs sm:text-sm text-blue-100/90 max-w-lg leading-relaxed font-normal">
-              {nextModule.micro_skill || 'Master natural German spoken phrasing with immediate AI feedback.'}
+              {nextModule.micro_skill || 'Master natural German spoken phrasing with 1-on-1 native coaching.'}
             </p>
 
             <div className="pt-3">
@@ -312,7 +311,7 @@ export const Home: React.FC = () => {
             </h2>
             <p className="text-xs sm:text-sm text-blue-100/90 max-w-lg leading-relaxed font-normal">
               {isNewUser
-                ? "Interactive voice simulations tailored to your field — speak naturally with instant feedback."
+                ? "Realistic workplace German conversations tailored to your field — speak naturally with personalized coaching."
                 : "Practice specialized conversational German tailored for your professional domain."}
             </p>
             <div className="pt-3">
@@ -379,19 +378,19 @@ export const Home: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. QUICK SIMULATION ROW (Compact Roleplay Shortcut) */}
+      {/* 3. QUICK CONVERSATION PRACTICE ROW */}
       <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-[#255CC1] border border-blue-100">
-              Instant Roleplay
+              Workplace Scenario
             </span>
             <h3 className="font-heading font-bold text-sm sm:text-base text-[#00215C]">
-              Quick Spoken Simulation
+              Quick Spoken Practice
             </h3>
           </div>
           <p className="text-xs text-slate-500 mt-0.5 font-normal">
-            Practice spontaneous conversation in a realistic scenario
+            Practice spontaneous conversation in a realistic workplace setting
           </p>
         </div>
 

@@ -308,13 +308,14 @@ export function analyzeSentenceLinguistics(germanSentence: string, englishTransl
     ? 'Formal register (Sie-Form): Essential for professional workplaces, healthcare wards, and public services.'
     : 'Everyday German conversational register.';
 
-  // Build spoken guidance for the AI voice adapter in Learn Mode
+  // Build spoken guidance for the language trainer in Learn Mode with parallel word meaning
   const primaryWord = selectedWords[0];
   let spokenCoachPrompt = '';
   if (primaryWord) {
-    spokenCoachPrompt = `The German sentence is: "${cleanSentence}". It means: "${englishTranslation}". Pay close attention to the word "${primaryWord.cleanWord}", broken down as: "${primaryWord.syllables.replace(/·/g, ' - ')}". ${structureNote} Now try pronouncing it and speak the full phrase aloud!`;
+    const wordMeaningClause = primaryWord.meaning ? `, which means "${primaryWord.meaning}"` : '';
+    spokenCoachPrompt = `Listen closely: "${cleanSentence}" — which means "${englishTranslation}". Notice the word "${primaryWord.cleanWord}"${wordMeaningClause}, pronounced "${primaryWord.syllables.replace(/·/g, ' - ')}". ${structureNote} Give it a try!`;
   } else {
-    spokenCoachPrompt = `The German sentence is: "${cleanSentence}". It means: "${englishTranslation}". ${structureNote} Now speak it aloud in German!`;
+    spokenCoachPrompt = `Listen closely: "${cleanSentence}" — which means "${englishTranslation}". ${structureNote} Give it a try!`;
   }
 
   return {
@@ -326,4 +327,15 @@ export function analyzeSentenceLinguistics(germanSentence: string, englishTransl
     words: selectedWords,
     spokenCoachPrompt,
   };
+}
+
+/**
+ * Returns spoken text for word assistance that parallelly pairs
+ * the German pronunciation with its English meaning.
+ */
+export function getWordPronunciationAudioPrompt(word: WordLinguisticBreakdown): string {
+  if (word.meaning) {
+    return `${word.cleanWord}. Meaning: ${word.meaning}.`;
+  }
+  return word.cleanWord;
 }

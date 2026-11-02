@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { DiagnosticRecapResult } from '../services/diagnosticService';
-import { ArrowLeft, Award, Clock, Loader2, AlertCircle, MessageSquare, HelpCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, Award, Clock, Loader2, AlertCircle, MessageSquare, HelpCircle, BookOpen } from 'lucide-react';
 import { AppLogo } from '../components/common/AppLogo';
 import { FeedbackModal } from '../components/feedback/FeedbackModal';
 import { explainAdapter, ExplainResult } from '../services/explainAdapter';
@@ -245,7 +245,7 @@ export const SessionDetail: React.FC = () => {
                           {expandedExplainIdx === i && (
                             <div className="p-3 rounded-lg bg-[#EBF2FF] border border-blue-200/80 text-xs text-[#00215C] space-y-1 animate-fadeIn">
                               <div className="flex items-center gap-1.5 font-bold text-[10px] text-[#255CC1] uppercase tracking-wider">
-                                <Sparkles className="w-3 h-3 text-[#255CC1]" />
+                                <BookOpen className="w-3 h-3 text-[#255CC1]" />
                                 <span>Why this is correct:</span>
                               </div>
                               <p className="text-slate-800 leading-relaxed font-normal text-xs">

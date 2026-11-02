@@ -68,9 +68,6 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                 <p className="text-xs sm:text-sm font-bold text-[#00215C] leading-none">
                   {agentName} is speaking
                 </p>
-                <p className="text-[11px] text-slate-500 mt-1 leading-none font-medium">
-                  Listening begins once trainer finishes
-                </p>
               </div>
             </div>
             <div className="w-8 h-8 rounded-full bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center shrink-0 shadow-xs">
@@ -80,20 +77,17 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
         )}
 
         {/* =========================================================================
-            STATE 2: PROCESSING (STT / LLM Evaluation)
+            STATE 2: PROCESSING (Responding / Thinking)
         ========================================================================= */}
         {isProcessing && (
           <div className="flex items-center justify-between w-full animate-fadeIn">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200/80 flex items-center justify-center shrink-0">
-                <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+              <div className="w-7 h-7 rounded-full bg-blue-50 border border-blue-200/80 flex items-center justify-center shrink-0">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#255CC1]" />
               </div>
               <div>
-                <p className="text-xs sm:text-sm font-bold text-slate-900 leading-none">
-                  Analyzing spoken German...
-                </p>
-                <p className="text-[11px] text-slate-500 mt-1 leading-none font-medium">
-                  Evaluating pronunciation & fluency
+                <p className="text-xs sm:text-sm font-bold text-slate-800 leading-none">
+                  Listening & reflecting...
                 </p>
               </div>
             </div>
@@ -156,11 +150,8 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs sm:text-sm font-bold text-emerald-900 leading-none flex items-center gap-1.5">
-                      <span>Hearing you clearly</span>
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-1 leading-none font-medium truncate">
-                      Pause when finished or tap Finish
+                      <span>Listening to you</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
                     </p>
                   </div>
                 </div>
@@ -201,11 +192,8 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
               // Sub-state: Active Listening (Ready for learner)
               <div className="flex items-center justify-between w-full animate-fadeIn">
                 <div className="flex items-center gap-3">
-                  <div className="relative flex items-center justify-center">
-                    <span className="absolute w-7 h-7 rounded-full bg-blue-100 animate-ping opacity-60" />
-                    <div className="w-7 h-7 rounded-full bg-[#EBF2FF] border border-blue-200/80 flex items-center justify-center text-[#255CC1] relative z-10 shadow-xs">
-                      <Mic className="w-3.5 h-3.5 animate-pulse" />
-                    </div>
+                  <div className="w-8 h-8 rounded-full bg-[#EBF2FF] border border-blue-200/80 flex items-center justify-center text-[#255CC1] shrink-0 shadow-xs">
+                    <Mic className="w-4 h-4 animate-pulse" />
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm font-bold text-[#00215C] leading-none">
@@ -218,17 +206,6 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {onManualStartSpeaking && (
-                    <button
-                      type="button"
-                      onClick={onManualStartSpeaking}
-                      className="px-3 py-1.5 rounded-full bg-[#EBF2FF] hover:bg-blue-100 text-[#255CC1] text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
-                      title="Tap to speak manually"
-                    >
-                      <Mic className="w-3 h-3" />
-                      <span>Tap to Speak</span>
-                    </button>
-                  )}
                   {onTogglePause && (
                     <button
                       type="button"

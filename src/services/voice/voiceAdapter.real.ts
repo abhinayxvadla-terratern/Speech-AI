@@ -1210,7 +1210,7 @@ Never put anything in "example" other than the raw transcript. Never include any
               ? `Focus on pronouncing "${missedTokens.join(', ')}"`
               : 'Focus on clear pronunciation.',
             spoken_feedback: fbCorrect
-              ? 'Perfekt! You spoke correct, we are moving to the next word.'
+              ? "Ausgezeichnet! Sehr gut ausgesprochen. Weiter geht's!"
               : `Good attempt! Focus on "${missedTokens.join(', ')}". Listen: "${targetPhrases}". Try saying it again!`,
           };
         }
@@ -1278,11 +1278,11 @@ Never put anything in "example" other than the raw transcript. Never include any
 
         let spokenFeedback: string;
         if (isCorrect) {
-          spokenFeedback = "Perfekt! You spoke correct, we are moving to the next word.";
+          spokenFeedback = "Ausgezeichnet! Sehr gut ausgesprochen. Weiter geht's!";
         } else if (parsed?.spoken_feedback && parsed.spoken_feedback.trim().length > 0) {
           spokenFeedback = parsed.spoken_feedback.trim();
         } else {
-          spokenFeedback = `Good attempt! Focus on: ${whatToChange || 'clear pronunciation'}. Listen: "${targetPhrases}". Try again!`;
+          spokenFeedback = `Good attempt! Focus on: ${whatToChange || 'clear pronunciation'}. Listen: "${targetPhrases}". Try saying it again!`;
         }
 
         if ((isNonEngagement || isObviousOffTopic) && session.strikes > 0 && !spokenFeedback.includes("No worries")) {
@@ -1661,8 +1661,8 @@ detected_mistakes may be an empty array. These are logged silently — never sur
     if (!session) return;
 
     const text = isFirst
-      ? `Hallo! "${phrase.german}". In English, this means: "${phrase.english}". Now, please say it in German!`
-      : `"${phrase.german}". In English, this means: "${phrase.english}". Now, please say it in German!`;
+      ? `Hallo! Listen closely: "${phrase.german}". That means "${phrase.english}". Give it a try!`
+      : `Next phrase: "${phrase.german}". That means "${phrase.english}". Give it a try!`;
 
     await this.speak(sessionHandle, text);
   }
@@ -1680,8 +1680,8 @@ detected_mistakes may be an empty array. These are logged silently — never sur
     if (!session) return;
 
     const text = tip
-      ? `Notice this: ${tip}. Listen carefully: "${phrase.german}". Now, give it another try!`
-      : `Listen carefully: "${phrase.german}". Now, give it another try!`;
+      ? `Here's a tip: ${tip}. Listen closely: "${phrase.german}". Give it another try!`
+      : `Listen closely: "${phrase.german}". Give it another try!`;
 
     await this.speak(sessionHandle, text);
   }

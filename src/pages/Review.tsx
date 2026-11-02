@@ -5,7 +5,7 @@ import {
   ArrowLeft, 
   RotateCcw, 
   HelpCircle, 
-  Sparkles, 
+  BookOpen, 
   CheckCircle2, 
   Loader2, 
   TrendingDown,
@@ -297,7 +297,7 @@ export const Review: React.FC = () => {
                             {expState?.data && (
                               <div className="p-2.5 rounded-lg bg-blue-50/90 border border-blue-200/80 text-slate-800 text-xs space-y-1 animate-fadeIn">
                                 <div className="flex items-center gap-1 text-[#255CC1] font-bold text-[10px] uppercase tracking-wider">
-                                  <Sparkles className="w-3 h-3" />
+                                  <BookOpen className="w-3 h-3" />
                                   <span>Explanation</span>
                                 </div>
                                 <p className="font-medium text-[#00215C] leading-relaxed">

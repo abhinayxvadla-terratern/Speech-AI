@@ -20,9 +20,7 @@ import {
   Loader2, 
   Volume2, 
   AlertCircle,
-  HelpCircle,
   Clock,
-  Sparkles,
   Square,
   X,
   Compass
@@ -628,17 +626,16 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
           ) : (
             <Square className="w-3 h-3 fill-white" />
           )}
-          <span>Complete Simulation</span>
+          <span>Finish</span>
         </button>
       </header>
 
       {/* Target Phrase Stepper Stage (Learn Mode) */}
       {mode === 'learn' && currentPhrase && (
-        <div className="mb-4 p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-3 relative overflow-hidden animate-fadeIn">
+        <div className="mb-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden animate-fadeIn">
           {/* Stepper bar */}
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
-              <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
+            <span className="font-bold text-[#255CC1] uppercase tracking-wider text-[11px]">
               Phrase {currentPhraseIndex + 1} of {targetPhrases.length}
             </span>
             <div className="flex items-center gap-2">
@@ -649,7 +646,7 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
                     voiceAdapter.speak(sessionHandle, currentPhrase.german).catch(console.warn);
                   }
                 }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#255CC1] text-[11px] font-bold transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#255CC1] text-[11px] font-bold transition-colors cursor-pointer"
                 title="Listen to German pronunciation"
               >
                 <Volume2 className="w-3.5 h-3.5" />
@@ -746,20 +743,19 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Finish Simulation</span>
+                <span>Finish</span>
               </button>
             )}
           </div>
         </div>
       )}
 
-      {/* Scenario Brief Stage Card (Practice Mode) */}
+      {/* Scenario Context Card (Practice Mode) */}
       {mode === 'practice' && (
-        <div className="mb-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2.5 relative overflow-hidden animate-fadeIn">
+        <div className="mb-3 p-4 rounded-2xl bg-gradient-to-b from-white to-[#F8FAFF] border border-blue-100 shadow-[0_4px_20px_rgba(37,92,193,0.06)] space-y-2 relative overflow-hidden animate-fadeIn">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#255CC1]" />
-              Roleplay Scenario Context
+            <span className="text-[11px] font-bold text-[#255CC1] uppercase tracking-wider">
+              Scenario Context
             </span>
             {scenario.parent_domain && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#255CC1] border border-blue-200/60">
@@ -770,12 +766,6 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
           <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
             {scenario.description}
           </p>
-          <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-600 font-medium">
-            <HelpCircle className="w-4 h-4 text-[#255CC1] shrink-0" />
-            <span>
-              <strong>100% German Roleplay:</strong> The conversation is held entirely in German. Respond naturally. A comprehensive English diagnostic recap will be provided at the end.
-            </span>
-          </div>
         </div>
       )}
 
@@ -802,9 +792,9 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#EBF2FF] text-[#255CC1] flex items-center justify-center mx-auto mb-2.5 shadow-xs">
               <Compass className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
             </div>
-            <p className="text-sm font-heading font-extrabold text-[#00215C]">Your Simulation Stage is Active</p>
+            <p className="text-sm font-heading font-extrabold text-[#00215C]">German Workplace Conversation Ready</p>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto font-medium leading-relaxed">
-              Listen to the opening prompt from {activeCharacter?.name || 'your roleplay partner'}, then respond in German.
+              Listen to the opening prompt from {activeCharacter?.name || 'your dialogue partner'}, then respond in German.
             </p>
           </div>
         ) : (
@@ -853,27 +843,11 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
 
                 {/* Per-Turn Feedback (SCENARIOS LEARN MODE: Only shown when a recurring error pattern is flagged) */}
                 {mode === 'learn' && isUser && (!turn.isCorrect && turn.correction) && (
-                  <div className="mr-12 ml-4 p-3.5 rounded-xl bg-blue-50/70 border border-blue-100/90 text-xs text-[#00215C] space-y-2.5">
-                    <div className="flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wider text-[#255CC1]">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#255CC1]" />
-                      <span>Recurring Pattern Note</span>
-                    </div>
-
-                    {/* Visually Distinct Element 1: What the user said */}
-                    <div className="p-2.5 rounded-lg bg-white border border-rose-100 flex items-start gap-2 shadow-2xs">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded shrink-0">
-                        You said:
-                      </span>
-                      <span className="text-slate-800 font-medium text-xs break-words">
-                        {turn.rawTranscript || turn.text}
-                      </span>
-                    </div>
-
-                    {/* Visually Distinct Element 2: Correction (shown only when a genuine mistake exists) */}
+                  <div className="mr-12 ml-4 p-3 rounded-xl bg-blue-50/70 border border-blue-100/90 text-xs text-[#00215C] space-y-1.5">
                     {(!turn.isCorrect && turn.correction && (turn.correction || '').trim().toLowerCase() !== ((turn.rawTranscript || turn.text || '')).trim().toLowerCase()) && (
-                      <div className="p-2.5 rounded-lg bg-white border border-emerald-100 flex items-start gap-2 shadow-2xs">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">
-                          Correction:
+                      <div className="flex items-start gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#255CC1] bg-white px-1.5 py-0.5 rounded border border-blue-200/80 shrink-0">
+                          Natural Phrasing:
                         </span>
                         <span className="text-emerald-950 font-semibold text-xs break-words">
                           {turn.correction}
@@ -883,7 +857,7 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
 
                     {/* Feedback / Explanation note */}
                     {turn.feedback_en && (
-                      <p className="text-slate-700 text-xs leading-relaxed pt-0.5 font-normal">
+                      <p className="text-slate-600 text-[11px] leading-relaxed font-normal pl-0.5">
                         {turn.feedback_en}
                       </p>
                     )}

@@ -11,7 +11,7 @@ import {
   ArrowRight, 
   CheckCircle2, 
   Award,
-  Sparkles,
+  Clock,
   Loader2 
 } from 'lucide-react';
 
@@ -239,7 +239,7 @@ export const ExamModeFlow: React.FC<ExamModeFlowProps> = ({ cefrLevel, onExit })
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-xs text-slate-600 max-w-sm mx-auto">
-            <Sparkles className="w-4 h-4 text-[#255CC1] mx-auto mb-1.5" />
+            <Clock className="w-4 h-4 text-[#255CC1] mx-auto mb-1.5" />
             <p className="font-semibold text-[#00215C]">Audio tracks coming in upcoming release</p>
             <p className="text-[11px] text-slate-400 mt-0.5">Proceed to the interactive Speaking section.</p>
           </div>
@@ -308,7 +308,7 @@ export const ExamModeFlow: React.FC<ExamModeFlowProps> = ({ cefrLevel, onExit })
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-xs text-slate-600 max-w-sm mx-auto">
-            <Sparkles className="w-4 h-4 text-[#255CC1] mx-auto mb-1.5" />
+            <Clock className="w-4 h-4 text-[#255CC1] mx-auto mb-1.5" />
             <p className="font-semibold text-[#00215C]">Reading passages coming in upcoming release</p>
             <p className="text-[11px] text-slate-400 mt-0.5">Proceed to the final Writing section.</p>
           </div>
@@ -343,9 +343,9 @@ export const ExamModeFlow: React.FC<ExamModeFlowProps> = ({ cefrLevel, onExit })
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-xs text-slate-600 max-w-sm mx-auto">
-            <Sparkles className="w-4 h-4 text-[#255CC1] mx-auto mb-1.5" />
+            <Clock className="w-4 h-4 text-[#255CC1] mx-auto mb-1.5" />
             <p className="font-semibold text-[#00215C]">Writing prompts coming in upcoming release</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Complete exam simulation.</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Complete exam session.</p>
           </div>
 
           <button
