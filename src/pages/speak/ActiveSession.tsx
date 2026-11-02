@@ -227,7 +227,6 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
   const pendingAdvanceRef = useRef<boolean>(false);
 
   const currentPhrase = targetPhrases[currentPhraseIndex] || targetPhrases[0];
-  const primaryTargetPhrase = currentPhrase.german;
 
   const currentLinguisticAnalysis = useMemo(() => {
     if (mode !== 'learn' || !currentPhrase?.german) return null;
@@ -279,11 +278,12 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
         }
 
         // 2. Start Voice Adapter session
+        const initialPhrase = targetPhrases[0]?.german || 'Guten Tag!';
         const handle = await voiceAdapter.startSession({
           tab: 'speak',
           mode: mode,
           moduleId: module.id,
-          targetPhrase: primaryTargetPhrase,
+          targetPhrase: initialPhrase,
           durationMinutes: durationMinutes,
           isCheckpoint: module.is_checkpoint,
         });
@@ -444,7 +444,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
         if (!hasSpokenOpenerRef.current && (!initialTranscript || initialTranscript.length === 0)) {
           hasSpokenOpenerRef.current = true;
           setTimeout(() => {
-            if (!active || !handle) return;
+            if (!handle) return;
             const userName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
             if (mode === 'learn') {
               const firstPhrase = targetPhrases[0] || { german: 'Guten Tag!', english: 'Good day! / Hello!' };
@@ -453,7 +453,7 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
               const opener = `Welcome ${userName}! This is a realistic scenario: "${module.title}". We will have a complete German conversation. Let's begin! Hallo! Wir starten Ihre Praxis-Situation für "${module.title}". Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`;
               voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             }
-          }, 100);
+          }, 400);
         }
       } catch (err: any) {
         console.error('Error initializing active speak session:', err);
@@ -465,12 +465,13 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
 
     return () => {
       active = false;
+      hasSpokenOpenerRef.current = false;
       voiceAdapter.stopSpeaking?.();
       if (cleanupTranscript) cleanupTranscript();
       if (cleanupState) cleanupState();
       if (cleanupSessionEnded) cleanupSessionEnded();
     };
-  }, [user, module.id, mode, primaryTargetPhrase]);
+  }, [user, module.id, mode]);
 
   // Deliver recorded audio chunk to voiceAdapter automatically upon VAD speech-end
   const handleDeliverAudio = useCallback(async (audioBlob?: Blob, clientTranscript?: string) => {
@@ -480,12 +481,17 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
     }
     try {
       setErrorMsg(null);
+      // Ensure the voice adapter context is strictly aligned with the current active phrase
+      const activePhraseObj = targetPhrases[currentPhraseIndexRef.current] || currentPhrase;
+      if (sessionHandle.context) {
+        sessionHandle.context.targetPhrase = activePhraseObj.german;
+      }
       await voiceAdapter.sendAudio(sessionHandle, audioBlob, clientTranscript);
     } catch (err: any) {
       console.error('Error sending audio chunk:', err);
       setErrorMsg('Could not transcribe audio clearly. Please try speaking again.');
     }
-  }, [sessionHandle]);
+  }, [sessionHandle, currentPhrase, targetPhrases]);
 
   // Automatic Turn-Taking using Client-Side Voice Activity Detection (VAD) & Web Speech
   const {

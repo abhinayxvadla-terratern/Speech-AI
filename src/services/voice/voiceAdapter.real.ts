@@ -349,16 +349,38 @@ export class RealVoiceAdapter implements VoiceAdapter {
 
         if (res.ok) {
           const data = await res.json();
-          const transcript = (data.transcript || '').trim();
-          if (transcript) {
-            return { transcript, confidence: data.confidence || 'high' };
+          const serverTranscript = (data.transcript || '').trim();
+          const cleanClient = (clientTranscript || '').trim();
+
+          // Intelligent hybrid selection: if client transcript matched target tokens better than server
+          if (cleanClient && targetPhrase) {
+            const tgtTokens = targetPhrase.toLowerCase().replace(/[.,!?;:\"'()]/g, '').split(/\s+/).filter(Boolean);
+            const clientMatches = tgtTokens.filter((t) => cleanClient.toLowerCase().includes(t)).length;
+            const serverMatches = tgtTokens.filter((t) => serverTranscript.toLowerCase().includes(t)).length;
+            if (clientMatches > serverMatches) {
+              return { transcript: cleanClient, confidence: 'high' };
+            }
+          }
+
+          if (serverTranscript) {
+            return { transcript: serverTranscript, confidence: data.confidence || 'high' };
+          }
+
+          if (cleanClient) {
+            return { transcript: cleanClient, confidence: 'high' };
           }
         } else {
           const errText = await res.text().catch(() => '');
           console.warn(`[RealVoiceAdapter] /api/stt HTTP ${res.status}:`, errText);
+          if (clientTranscript && clientTranscript.trim().length > 0) {
+            return { transcript: clientTranscript.trim(), confidence: 'high' };
+          }
         }
       } catch (sttApiErr) {
         console.warn('[RealVoiceAdapter] /api/stt route unreachable, attempting direct fallback:', sttApiErr);
+        if (clientTranscript && clientTranscript.trim().length > 0) {
+          return { transcript: clientTranscript.trim(), confidence: 'high' };
+        }
       }
     }
 
@@ -1164,18 +1186,26 @@ Never put anything in "example" other than the raw transcript. Never include any
         const normUmlauts = (s: string) =>
           s.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
 
+        const joinedUser = cleanUsrTokens.join('');
+        const normJoinedUser = normUmlauts(joinedUser);
+
         let matchedCount = 0;
         const missedTokens: string[] = [];
 
         cleanTgtTokens.forEach((tgt: string) => {
           const normTgt = normUmlauts(tgt);
-          const isMatched = cleanUsrTokens.some((usr) => {
+          let isMatched = cleanUsrTokens.some((usr) => {
             if (usr === tgt) return true;
             const normUsr = normUmlauts(usr);
             if (normUsr === normTgt) return true;
             if (tgt.length >= 4 && (usr.startsWith(tgt) || tgt.startsWith(usr))) return true;
             return false;
           });
+
+          // Compound word and split word handling (e.g. "Hafer Milch" matches "Hafermilch")
+          if (!isMatched && (joinedUser.includes(tgt) || normJoinedUser.includes(normTgt))) {
+            isMatched = true;
+          }
 
           if (isMatched) {
             matchedCount++;
@@ -1250,13 +1280,13 @@ Never put anything in "example" other than the raw transcript. Never include any
         let voiceGroundScore: number;
         if (!isGenuine || isNonEngagement || isObviousOffTopic) {
           voiceGroundScore = 1;
-        } else if (matchRatio >= 0.95) {
+        } else if (matchRatio >= 0.85) {
           voiceGroundScore = 5;
-        } else if (matchRatio >= 0.80) {
+        } else if (matchRatio >= 0.70) {
           voiceGroundScore = 4;
-        } else if (matchRatio >= 0.60) {
+        } else if (matchRatio >= 0.50) {
           voiceGroundScore = 3;
-        } else if (matchRatio >= 0.40) {
+        } else if (matchRatio >= 0.30) {
           voiceGroundScore = 2;
         } else {
           voiceGroundScore = 1;
@@ -1265,7 +1295,7 @@ Never put anything in "example" other than the raw transcript. Never include any
         // The final score is strictly capped by what the learner's voice actually matched
         const rawLlmScore = typeof parsed?.score === 'number' && parsed.score >= 1 && parsed.score <= 5 ? parsed.score : voiceGroundScore;
         const turnScore = Math.min(rawLlmScore, voiceGroundScore);
-        const isCorrect = matchRatio >= 0.80 && turnScore >= 4;
+        const isCorrect = matchRatio >= 0.70 && turnScore >= 4;
         const correction = !isCorrect ? (parsed?.correction || targetPhrases) : null;
         const whatWasGood =
           parsed?.what_was_good ||
