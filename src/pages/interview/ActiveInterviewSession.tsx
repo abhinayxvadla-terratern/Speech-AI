@@ -403,13 +403,13 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
               if (handle && handle.context) {
                 handle.context.targetPhrase = nextQ.german;
               }
-              const nextAnalysis = analyzeSentenceLinguistics(nextQ.german, nextQ.english || '');
-              const nextPrompt = `The next interview question is: "${nextQ.german}" — meaning "${nextQ.english}". Notice: ${nextAnalysis.structureNote} How would you answer this in German?`;
+              const meaningText = nextQ.english ? ` In English, that means: "${nextQ.english}".` : '';
+              const nextPrompt = `Here is your next interview question: "${nextQ.german}".${meaningText} How would you answer this? Please respond in German.`;
               setTimeout(() => {
                 if (active) {
                   voiceAdapter.speak(handle, nextPrompt).catch(console.warn);
                 }
-              }, 1200);
+              }, 800);
             } else {
               // Completed all questions in the interview workout!
               setTimeout(() => {
@@ -419,7 +419,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           }
         });
 
-        // 6. Proactive AI Guidance: In all interview sessions, the interviewer speaks first and asks the first question
+        // 6. Proactive Guidance: In all interview sessions, the interviewer speaks first and asks the first question
         if (!hasSpokenOpenerRef.current && (!initialTranscript || initialTranscript.length === 0)) {
           hasSpokenOpenerRef.current = true;
           const userName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
@@ -431,8 +431,8 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
               const opener = `Willkommen zur mündlichen Prüfung. ${examPromptText.german || firstQuestion}`;
               voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             } else if (mode === 'learn') {
-              const analysis = analyzeSentenceLinguistics(currentQuestion.german, currentQuestion.english || '');
-              const opener = `Welcome ${userName}! Today we are preparing for your interview: ${interviewTypeName}. The first question is: "${currentQuestion.german}" — meaning "${currentQuestion.english}". ${analysis.structureNote} How would you answer this? Please respond in German.`;
+              const meaningText = currentQuestion.english ? ` In English, that means: "${currentQuestion.english}".` : '';
+              const opener = `Welcome ${userName}! Today we are preparing for your interview: ${interviewTypeName}. The first question is: "${currentQuestion.german}".${meaningText} How would you answer this? Please respond in German.`;
               voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             } else {
               const opener = `Welcome ${userName}! This is your practice interview for ${interviewTypeName}. From this moment on, the interview will be conducted entirely in German. Let's begin! Guten Tag! Lassen Sie uns direkt beginnen: ${firstQuestion}. Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`;

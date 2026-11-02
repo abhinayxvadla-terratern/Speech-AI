@@ -412,13 +412,13 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
               if (handle && handle.context) {
                 handle.context.targetPhrase = nextPhrase.german;
               }
-              const nextAnalysis = analyzeSentenceLinguistics(nextPhrase.german, nextPhrase.english || '');
-              const nextPrompt = `The next phrase is: "${nextPhrase.german}" — meaning "${nextPhrase.english}". ${nextAnalysis.structureNote} Pay attention to "${nextAnalysis.words[0]?.cleanWord || nextPhrase.german}". Say it aloud!`;
+              const meaningText = nextPhrase.english ? ` In English, that means: "${nextPhrase.english}".` : '';
+              const nextPrompt = `Here is your next phrase: "${nextPhrase.german}".${meaningText} Now try saying it aloud in German!`;
               setTimeout(() => {
                 if (active) {
                   voiceAdapter.speak(handle, nextPrompt).catch(console.warn);
                 }
-              }, 1200);
+              }, 800);
             } else {
               // All phrases in this workout completed! Wrap up and finish session
               setTimeout(() => {
@@ -428,18 +428,19 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
           }
         });
 
-        // 6. Proactive AI Guidance: In all scenarios, the AI speaks first and guides the user
+        // 6. Proactive Guidance: In all scenarios, the coach speaks first and guides the user
         if (!hasSpokenOpenerRef.current && (!initialTranscript || initialTranscript.length === 0)) {
           hasSpokenOpenerRef.current = true;
           setTimeout(() => {
             if (!active) return;
             const userName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
             if (mode === 'learn') {
-              const analysis = analyzeSentenceLinguistics(currentPhrase.german, currentPhrase.english || '');
-              const opener = `Welcome ${userName}! Today we are practicing ${scenario.title}. ${analysis.spokenCoachPrompt}`;
+              const phrase = targetPhrases[0] || currentPhrase;
+              const meaningText = phrase.english ? ` In English, that means: "${phrase.english}".` : '';
+              const opener = `Welcome ${userName}! Today we are practicing ${scenario.title}. Listen closely: "${phrase.german}".${meaningText} Now try saying it aloud in German!`;
               voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             } else {
-              const opener = `Welcome ${userName}! This is a realistic simulation: "${scenario.title}". We are going to have a complete conversation in German. Let's begin! Hallo! Wir starten Ihre Praxis-Situation für "${scenario.title}". Wie kann ich Ihnen heute helfen?`;
+              const opener = `Welcome ${userName}! This is a realistic workplace conversation: "${scenario.title}". Let's begin! Hallo! Wir starten Ihre Praxis-Situation für "${scenario.title}". Wie kann ich Ihnen heute helfen?`;
               voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             }
           }, 350);

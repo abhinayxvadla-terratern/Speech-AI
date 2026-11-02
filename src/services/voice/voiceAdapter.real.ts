@@ -880,6 +880,9 @@ Return ONLY valid JSON:
         }
 
         let replyDe = parsed.reply_de || 'Vielen Dank für Ihre Antwort. Können Sie das noch etwas genauer erläutern?';
+        if (mode === 'learn' && !isNonEngagement && (!parsed.detected_mistakes || parsed.detected_mistakes.length === 0)) {
+          replyDe = `Great response! Well articulated. ${replyDe}`;
+        }
         if (isNonEngagement && !replyDe.includes("No worries")) {
           replyDe = `No worries, let's keep going. ${replyDe}`;
         }
@@ -1058,8 +1061,9 @@ Return ONLY valid JSON:
           userTurn.isCorrect = true;
           userTurn.correction = null;
           userTurn.category = null;
-          userTurn.feedback_en = 'Ausgezeichnet! Natural and accurate recitation.';
+          userTurn.feedback_en = 'Excellent! Natural and accurate German recitation.';
           userTurn.score = 5;
+          finalReply = `Excellent! Very natural phrasing. ${replyDe}`;
         }
 
         if ((isNonEngagement || isObviousOffTopic) && session.strikes > 0 && !finalReply.includes("No worries")) {
@@ -1240,7 +1244,7 @@ Never put anything in "example" other than the raw transcript. Never include any
               ? `Focus on pronouncing "${missedTokens.join(', ')}"`
               : 'Focus on clear pronunciation.',
             spoken_feedback: fbCorrect
-              ? "Ausgezeichnet! Sehr gut ausgesprochen. Weiter geht's!"
+              ? "Excellent! Perfect pronunciation. Let's move to the next phrase."
               : `Good attempt! Focus on "${missedTokens.join(', ')}". Listen: "${targetPhrases}". Try saying it again!`,
           };
         }
@@ -1308,7 +1312,7 @@ Never put anything in "example" other than the raw transcript. Never include any
 
         let spokenFeedback: string;
         if (isCorrect) {
-          spokenFeedback = "Ausgezeichnet! Sehr gut ausgesprochen. Weiter geht's!";
+          spokenFeedback = "Excellent! Perfect pronunciation. Let's move to the next phrase.";
         } else if (parsed?.spoken_feedback && parsed.spoken_feedback.trim().length > 0) {
           spokenFeedback = parsed.spoken_feedback.trim();
         } else {
@@ -1325,7 +1329,7 @@ Never put anything in "example" other than the raw transcript. Never include any
         userTurn.category = parsed?.category || (isCorrect ? null : 'Pronunciation & Delivery');
         userTurn.what_was_good = whatWasGood;
         userTurn.what_to_change = whatToChange;
-        userTurn.feedback_en = whatToChange || (isCorrect ? 'Accurate German pronunciation!' : 'Focus on clear pronunciation.');
+        userTurn.feedback_en = whatToChange || (isCorrect ? 'Excellent! Clear and accurate German pronunciation.' : 'Focus on clear pronunciation.');
         userTurn.score = turnScore;
         userTurn.confidence_hedge = Boolean(parsed?.confidence_hedge);
         this.notifyTranscript(session, { ...userTurn });
@@ -1684,15 +1688,18 @@ detected_mistakes may be an empty array. These are logged silently — never sur
     sessionHandle: VoiceSessionHandle,
     phrase: { german: string; english: string },
     isFirst: boolean,
-    _userName?: string,
-    _moduleTitle: string = 'German Speech Workout'
+    userName?: string,
+    moduleTitle: string = 'German Speech Workout'
   ): Promise<void> {
     const session = this.sessions.get(sessionHandle.id);
     if (!session) return;
 
+    const userGreeting = userName ? `Welcome ${userName}! ` : 'Welcome! ';
+    const meaningText = phrase.english ? ` In English, that means: "${phrase.english}".` : '';
+
     const text = isFirst
-      ? `Hallo! Listen closely: "${phrase.german}". That means "${phrase.english}". Give it a try!`
-      : `Next phrase: "${phrase.german}". That means "${phrase.english}". Give it a try!`;
+      ? `${userGreeting}Let's start today's workout for "${moduleTitle}". Listen closely: "${phrase.german}".${meaningText} Now try saying it aloud in German!`
+      : `Here is your next phrase: "${phrase.german}".${meaningText} Now try saying it aloud in German!`;
 
     await this.speak(sessionHandle, text);
   }
