@@ -109,6 +109,15 @@ export const Speak: React.FC = () => {
         }
       });
 
+      // Merge with persistent local storage cache for immediate, instantaneous unlocks
+      try {
+        const rawLocal = localStorage.getItem('speechai_completed_modules');
+        if (rawLocal) {
+          const localList: string[] = JSON.parse(rawLocal);
+          localList.forEach((id) => completedIds.add(id));
+        }
+      } catch (_) {}
+
       // Passing supersedes any previous failure
       completedIds.forEach((id) => failedIds.delete(id));
 
@@ -352,6 +361,9 @@ export const Speak: React.FC = () => {
           setSelectedModule(null);
         }}
         onCompleted={() => {
+          if (selectedModule) {
+            setCompletedModuleIds((prev) => new Set([...prev, selectedModule.id]));
+          }
           setView('list');
           setSelectedModule(null);
           loadModuleData();

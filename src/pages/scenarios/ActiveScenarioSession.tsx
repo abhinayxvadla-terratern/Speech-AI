@@ -11,6 +11,8 @@ import { useAutoTurnVAD } from '../../services/voice/useAutoTurnVAD';
 import { AutoTurnStatusDock } from '../../components/voice/AutoTurnStatusDock';
 import { VoiceTurnControls } from '../../components/voice/VoiceTurnControls';
 import { matchCharacter, FALLBACK_CHARACTERS } from '../../services/characterService';
+import { analyzeSentenceLinguistics } from '../../services/germanLinguisticsService';
+import { LearnLinguisticStage } from '../../components/voice/LearnLinguisticStage';
 import { 
   ArrowLeft, 
   ArrowRight,
@@ -259,6 +261,11 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
     { german: 'Guten Tag!', english: 'Hello!' };
   const primaryTargetPhrase = currentPhrase.german;
 
+  const currentLinguisticAnalysis = useMemo(() => {
+    if (mode !== 'learn' || !currentPhrase?.german) return null;
+    return analyzeSentenceLinguistics(currentPhrase.german, currentPhrase.english || '');
+  }, [mode, currentPhrase]);
+
   // Scroll to bottom when turns update
   useEffect(() => {
     turnsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -407,7 +414,8 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
               if (handle && handle.context) {
                 handle.context.targetPhrase = nextPhrase.german;
               }
-              const nextPrompt = `The next phrase is: "${nextPhrase.german}" — which means "${nextPhrase.english}". Now, say it!`;
+              const nextAnalysis = analyzeSentenceLinguistics(nextPhrase.german, nextPhrase.english || '');
+              const nextPrompt = `The next phrase is: "${nextPhrase.german}" — meaning "${nextPhrase.english}". ${nextAnalysis.structureNote} Pay attention to "${nextAnalysis.words[0]?.cleanWord || nextPhrase.german}". Say it aloud!`;
               setTimeout(() => {
                 if (active) {
                   voiceAdapter.speak(handle, nextPrompt).catch(console.warn);
@@ -429,7 +437,8 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
             if (!active) return;
             const userName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
             if (mode === 'learn') {
-              const opener = `Welcome ${userName}! Today we are practicing ${scenario.title}. I will give you a German phrase and explain the meaning in English, then you repeat it. The first phrase is: "${currentPhrase.german}" — which means "${currentPhrase.english}". Now, say it!`;
+              const analysis = analyzeSentenceLinguistics(currentPhrase.german, currentPhrase.english || '');
+              const opener = `Welcome ${userName}! Today we are practicing ${scenario.title}. ${analysis.spokenCoachPrompt}`;
               voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             } else {
               const opener = `Welcome ${userName}! This is a realistic simulation: "${scenario.title}". We are going to have a complete conversation in German. Let's begin! Hallo! Wir starten Ihre Praxis-Situation für "${scenario.title}". Wie kann ich Ihnen heute helfen?`;
@@ -508,7 +517,8 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
         sessionHandle.context.targetPhrase = nextPhrase.german;
       }
       if (sessionHandle && voiceAdapter.speak) {
-        const nextPrompt = `The next phrase is: "${nextPhrase.german}" — which means "${nextPhrase.english}". Now, say it!`;
+        const nextAnalysis = analyzeSentenceLinguistics(nextPhrase.german, nextPhrase.english || '');
+        const nextPrompt = `The next phrase is: "${nextPhrase.german}" — meaning "${nextPhrase.english}". ${nextAnalysis.structureNote} Say it aloud!`;
         voiceAdapter.speak(sessionHandle, nextPrompt).catch(console.warn);
       }
     } else {
@@ -544,6 +554,7 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
           .update({
             status: 'completed',
             completed_at: new Date().toISOString(),
+            transcript: turns,
           })
           .eq('id', dbSessionId);
 
@@ -668,6 +679,16 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
               </p>
             )}
           </div>
+
+          {/* Interactive Word Breakdown & Grammatical Structure Explanation in Learn Mode */}
+          {currentLinguisticAnalysis && (
+            <div className="pt-1">
+              <LearnLinguisticStage
+                analysis={currentLinguisticAnalysis}
+                sessionHandle={sessionHandle}
+              />
+            </div>
+          )}
 
           {/* Latest Feedback for Current Phrase if user has spoken */}
           {(() => {
@@ -877,29 +898,29 @@ export const ActiveScenarioSession: React.FC<ActiveScenarioSessionProps> = ({
       </div>
 
       {/* Bottom Voice Status Dock with Automatic Turn-Taking & Voice-Turn Controls */}
-      <div className="shrink-0 z-10 pt-1 flex flex-col items-center gap-2">
-        <VoiceTurnControls
-          onSlower={handleSlower}
-          onRepeat={handleRepeat}
-          onHint={handleHint}
-          hintText={currentPhrase.english ? `Scenario Hint: "${currentPhrase.english}"` : null}
-          showHint={mode === 'learn'}
-          disabled={voiceState === 'speaking' || isFinishing}
-        />
-        <AutoTurnStatusDock
-          voiceState={voiceState}
-          isUserSpeaking={isUserSpeaking}
-          isManualPaused={isManualPaused}
-          vadError={vadError}
-          volumeLevel={volumeLevel}
-          interimTranscript={interimTranscript}
-          onTogglePause={togglePause}
-          onManualSubmit={manualSubmit}
-          onManualStartSpeaking={manualStartSpeaking}
-          onRequestPermission={requestMicrophonePermission}
-          agentName={activeCharacter?.name || "Scenario Partner"}
-        />
-      </div>
+      <AutoTurnStatusDock
+        controlsSlot={
+          <VoiceTurnControls
+            onSlower={handleSlower}
+            onRepeat={handleRepeat}
+            onHint={handleHint}
+            hintText={currentPhrase?.english ? `Scenario Hint: "${currentPhrase.english}"` : null}
+            showHint={mode === 'learn'}
+            disabled={voiceState === 'speaking' || isFinishing}
+          />
+        }
+        voiceState={voiceState}
+        isUserSpeaking={isUserSpeaking}
+        isManualPaused={isManualPaused}
+        vadError={vadError}
+        volumeLevel={volumeLevel}
+        interimTranscript={interimTranscript}
+        onTogglePause={togglePause}
+        onManualSubmit={manualSubmit}
+        onManualStartSpeaking={manualStartSpeaking}
+        onRequestPermission={requestMicrophonePermission}
+        agentName={activeCharacter?.name || "Scenario Partner"}
+      />
 
       {/* Completion Recap Modal */}
       {completedSummary && (

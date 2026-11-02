@@ -13,6 +13,8 @@ import { useAutoTurnVAD } from '../../services/voice/useAutoTurnVAD';
 import { AutoTurnStatusDock } from '../../components/voice/AutoTurnStatusDock';
 import { VoiceTurnControls } from '../../components/voice/VoiceTurnControls';
 import { matchCharacter, FALLBACK_CHARACTERS } from '../../services/characterService';
+import { analyzeSentenceLinguistics } from '../../services/germanLinguisticsService';
+import { LearnLinguisticStage } from '../../components/voice/LearnLinguisticStage';
 import { 
   ArrowLeft, 
   CheckCircle2,
@@ -246,6 +248,11 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
 
   const currentQuestion = effectiveQuestions[currentQuestionIndex] || effectiveQuestions[0];
 
+  const currentLinguisticAnalysis = useMemo(() => {
+    if (mode !== 'learn' || !currentQuestion?.german) return null;
+    return analyzeSentenceLinguistics(currentQuestion.german, currentQuestion.english || '');
+  }, [mode, currentQuestion]);
+
   useEffect(() => {
     turnsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [turns, voiceState]);
@@ -397,7 +404,8 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
               if (handle && handle.context) {
                 handle.context.targetPhrase = nextQ.german;
               }
-              const nextPrompt = `The next interview question is: "${nextQ.german}" — which means "${nextQ.english}". How would you answer this? Please respond in German.`;
+              const nextAnalysis = analyzeSentenceLinguistics(nextQ.german, nextQ.english || '');
+              const nextPrompt = `The next interview question is: "${nextQ.german}" — meaning "${nextQ.english}". Notice: ${nextAnalysis.structureNote} How would you answer this in German?`;
               setTimeout(() => {
                 if (active) {
                   voiceAdapter.speak(handle, nextPrompt).catch(console.warn);
@@ -424,7 +432,8 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
               const opener = `Willkommen zur mündlichen Prüfung. ${examPromptText.german || firstQuestion}`;
               voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             } else if (mode === 'learn') {
-              const opener = `Welcome ${userName}! Today we are preparing for your interview: ${interviewTypeName}. I will guide you through key questions one by one. The first question is: "${currentQuestion.german}" — which means "${currentQuestion.english}". How would you answer this? Please respond in German.`;
+              const analysis = analyzeSentenceLinguistics(currentQuestion.german, currentQuestion.english || '');
+              const opener = `Welcome ${userName}! Today we are preparing for your interview: ${interviewTypeName}. The first question is: "${currentQuestion.german}" — meaning "${currentQuestion.english}". ${analysis.structureNote} How would you answer this? Please respond in German.`;
               voiceAdapter.speak(handle, opener).catch((e) => console.warn('Opener speak notice:', e));
             } else {
               const opener = `Welcome ${userName}! This is your practice interview for ${interviewTypeName}. From this moment on, the interview will be conducted entirely in German. Let's begin! Guten Tag! Lassen Sie uns direkt beginnen: ${firstQuestion}. Bitte antworten Sie auf Deutsch, sobald Sie bereit sind.`;
@@ -518,6 +527,7 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
           .update({
             status: 'completed',
             completed_at: new Date().toISOString(),
+            transcript: turns,
           })
           .eq('id', dbSessionId);
 
@@ -642,6 +652,16 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
               &ldquo;{currentQuestion.english}&rdquo;
             </p>
           </div>
+
+          {/* Interactive Word Breakdown & Grammatical Structure in Learn Mode */}
+          {currentLinguisticAnalysis && (
+            <div className="pt-1">
+              <LearnLinguisticStage
+                analysis={currentLinguisticAnalysis}
+                sessionHandle={sessionHandle}
+              />
+            </div>
+          )}
 
           {/* Answering Guidance Note */}
           {currentQuestion.guidance && (
@@ -784,29 +804,29 @@ export const ActiveInterviewSession: React.FC<ActiveInterviewSessionProps> = ({
       </div>
 
       {/* Bottom Voice Status Dock with Automatic Turn-Taking & Voice-Turn Controls */}
-      <div className="shrink-0 z-10 pt-1 flex flex-col items-center gap-2">
-        <VoiceTurnControls
-          onSlower={handleSlower}
-          onRepeat={handleRepeat}
-          onHint={handleHint}
-          hintText={currentQuestion.english ? `Question meaning: "${currentQuestion.english}"` : null}
-          showHint={mode === 'learn' && !isExamMode}
-          disabled={voiceState === 'speaking' || isFinishing}
-        />
-        <AutoTurnStatusDock
-          voiceState={voiceState}
-          isUserSpeaking={isUserSpeaking}
-          isManualPaused={isManualPaused}
-          vadError={vadError}
-          volumeLevel={volumeLevel}
-          interimTranscript={interimTranscript}
-          onTogglePause={togglePause}
-          onManualSubmit={manualSubmit}
-          onManualStartSpeaking={manualStartSpeaking}
-          onRequestPermission={requestMicrophonePermission}
-          agentName={activeCharacter?.name || "Interviewer"}
-        />
-      </div>
+      <AutoTurnStatusDock
+        controlsSlot={
+          <VoiceTurnControls
+            onSlower={handleSlower}
+            onRepeat={handleRepeat}
+            onHint={handleHint}
+            hintText={currentQuestion?.english ? `Question meaning: "${currentQuestion.english}"` : null}
+            showHint={mode === 'learn' && !isExamMode}
+            disabled={voiceState === 'speaking' || isFinishing}
+          />
+        }
+        voiceState={voiceState}
+        isUserSpeaking={isUserSpeaking}
+        isManualPaused={isManualPaused}
+        vadError={vadError}
+        volumeLevel={volumeLevel}
+        interimTranscript={interimTranscript}
+        onTogglePause={togglePause}
+        onManualSubmit={manualSubmit}
+        onManualStartSpeaking={manualStartSpeaking}
+        onRequestPermission={requestMicrophonePermission}
+        agentName={activeCharacter?.name || "Interviewer"}
+      />
 
       {/* Completion Recap Modal */}
       {completedSummary && (

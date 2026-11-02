@@ -3,6 +3,7 @@ import { Mic, Volume2, Loader2, Pause, Play, Check, AlertCircle } from 'lucide-r
 import { VoiceState } from '../../services/voice/types';
 
 export interface AutoTurnStatusDockProps {
+  controlsSlot?: React.ReactNode;
   voiceState: VoiceState;
   isUserSpeaking: boolean;
   isManualPaused: boolean;
@@ -18,6 +19,7 @@ export interface AutoTurnStatusDockProps {
 }
 
 export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
+  controlsSlot,
   voiceState,
   isUserSpeaking,
   isManualPaused,
@@ -39,9 +41,17 @@ export const AutoTurnStatusDock: React.FC<AutoTurnStatusDockProps> = ({
   return (
     <div
       style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
-      className={`fixed left-1/2 -translate-x-1/2 z-30 max-w-lg w-[calc(100%-2rem)] px-2 transition-all duration-300 pointer-events-auto ${className}`}
+      className={`fixed left-1/2 -translate-x-1/2 z-30 max-w-lg w-[calc(100%-2rem)] px-2 transition-all duration-300 pointer-events-none flex flex-col items-center gap-2.5 ${className}`}
     >
-      <div className="bg-white/92 backdrop-blur-xl border border-slate-200/80 shadow-[0_16px_40px_rgba(0,33,92,0.16),0_2px_10px_rgba(0,0,0,0.04)] rounded-full px-5 py-2.5 flex items-center justify-between gap-3 w-full">
+      {/* Upper Controls Slot (Slower, Repeat, Hint + Helpful Hint pop-up) strictly stacked above dock */}
+      {controlsSlot && (
+        <div className="pointer-events-auto w-full flex justify-center">
+          {controlsSlot}
+        </div>
+      )}
+
+      {/* Main Dock Capsule */}
+      <div className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-[0_16px_40px_rgba(0,33,92,0.16),0_2px_10px_rgba(0,0,0,0.04)] rounded-full px-5 py-2.5 flex items-center justify-between gap-3 w-full">
         {/* =========================================================================
             STATE 1: AGENT SPEAKING (TTS Playing)
         ========================================================================= */}

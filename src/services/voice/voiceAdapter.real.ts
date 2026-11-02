@@ -838,6 +838,14 @@ Return ONLY valid JSON:
           session.strikes += 1;
         }
 
+        userTurn.score = isNonEngagement
+          ? 1
+          : parsed.detected_mistakes?.length > 1
+          ? 2
+          : parsed.detected_mistakes?.length === 1
+          ? 3
+          : 5;
+
         if (session.strikes >= 3 || parsed.session_ended) {
           session.hasClosed = true;
           userTurn.sessionEnded = true;
@@ -1023,11 +1031,13 @@ Return ONLY valid JSON:
           userTurn.correction = parsed.correction || newMistakes[0]?.correction_de || newMistakes[0]?.correction || null;
           userTurn.category = parsed.category || newMistakes[0]?.category || 'Phrase Recitation';
           userTurn.feedback_en = feedbackMsg;
+          userTurn.score = (isNonEngagement || isObviousOffTopic) ? 1 : 2;
         } else {
           userTurn.isCorrect = true;
           userTurn.correction = null;
           userTurn.category = null;
           userTurn.feedback_en = 'Ausgezeichnet! Natural and accurate recitation.';
+          userTurn.score = 5;
         }
 
         if ((isNonEngagement || isObviousOffTopic) && session.strikes > 0 && !finalReply.includes("No worries")) {
@@ -1175,7 +1185,6 @@ Never put anything in "example" other than the raw transcript. Never include any
         });
 
         const matchRatio = cleanTgtTokens.length > 0 ? matchedCount / cleanTgtTokens.length : 1;
-        const isMatchedDetermined = matchRatio >= 0.75;
 
         let parsed: any = null;
         let provider: 'groq' | 'openrouter' = 'groq';
@@ -1185,20 +1194,22 @@ Never put anything in "example" other than the raw transcript. Never include any
           provider = res.provider;
         } catch (llmErr) {
           console.warn('[RealVoiceAdapter] LLM API call fallback to deterministic scoring:', llmErr);
+          const fbScore = matchRatio >= 0.95 ? 5 : matchRatio >= 0.8 ? 4 : matchRatio >= 0.6 ? 3 : matchRatio >= 0.4 ? 2 : 1;
+          const fbCorrect = matchRatio >= 0.8;
           parsed = {
-            correct: isMatchedDetermined,
-            score: isMatchedDetermined ? 5 : 3,
+            correct: fbCorrect,
+            score: fbScore,
             is_genuine_attempt: true,
             is_non_engagement: false,
-            what_was_good: isMatchedDetermined
+            what_was_good: fbCorrect
               ? 'Accurate German pronunciation and clear rhythm!'
               : 'Good effort speaking the German phrase aloud!',
-            what_to_change: isMatchedDetermined
+            what_to_change: fbCorrect
               ? null
               : missedTokens.length > 0
               ? `Focus on pronouncing "${missedTokens.join(', ')}"`
               : 'Focus on clear pronunciation.',
-            spoken_feedback: isMatchedDetermined
+            spoken_feedback: fbCorrect
               ? 'Perfekt! You spoke correct, we are moving to the next word.'
               : `Good attempt! Focus on "${missedTokens.join(', ')}". Listen: "${targetPhrases}". Try saying it again!`,
           };
@@ -1235,11 +1246,26 @@ Never put anything in "example" other than the raw transcript. Never include any
           return;
         }
 
-        const turnScore =
-          typeof parsed?.score === 'number' && parsed.score >= 1 && parsed.score <= 5
-            ? parsed.score
-            : (isMatchedDetermined ? 5 : 3);
-        const isCorrect = isMatchedDetermined || (isGenuine && Boolean(parsed?.correct) && turnScore >= 4);
+        // Strict Voice-Based Rating Grounded in Spoken Alignment
+        let voiceGroundScore: number;
+        if (!isGenuine || isNonEngagement || isObviousOffTopic) {
+          voiceGroundScore = 1;
+        } else if (matchRatio >= 0.95) {
+          voiceGroundScore = 5;
+        } else if (matchRatio >= 0.80) {
+          voiceGroundScore = 4;
+        } else if (matchRatio >= 0.60) {
+          voiceGroundScore = 3;
+        } else if (matchRatio >= 0.40) {
+          voiceGroundScore = 2;
+        } else {
+          voiceGroundScore = 1;
+        }
+
+        // The final score is strictly capped by what the learner's voice actually matched
+        const rawLlmScore = typeof parsed?.score === 'number' && parsed.score >= 1 && parsed.score <= 5 ? parsed.score : voiceGroundScore;
+        const turnScore = Math.min(rawLlmScore, voiceGroundScore);
+        const isCorrect = matchRatio >= 0.80 && turnScore >= 4;
         const correction = !isCorrect ? (parsed?.correction || targetPhrases) : null;
         const whatWasGood =
           parsed?.what_was_good ||
@@ -1410,6 +1436,14 @@ detected_mistakes may be an empty array. These are logged silently — never sur
         if (isNonEngagement) {
           session.strikes += 1;
         }
+
+        userTurn.score = isNonEngagement
+          ? 1
+          : parsed.detected_mistakes?.length > 1
+          ? 2
+          : parsed.detected_mistakes?.length === 1
+          ? 3
+          : 5;
 
         if (session.strikes >= 3 || parsed.session_ended) {
           session.hasClosed = true;

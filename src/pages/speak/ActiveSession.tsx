@@ -10,6 +10,8 @@ import { SessionDetailModal } from '../../components/SessionDetailModal';
 import { useAutoTurnVAD } from '../../services/voice/useAutoTurnVAD';
 import { AutoTurnStatusDock } from '../../components/voice/AutoTurnStatusDock';
 import { VoiceTurnControls } from '../../components/voice/VoiceTurnControls';
+import { analyzeSentenceLinguistics } from '../../services/germanLinguisticsService';
+import { LearnLinguisticStage } from '../../components/voice/LearnLinguisticStage';
 import { 
   ArrowLeft, 
   ArrowRight,
@@ -227,6 +229,11 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
 
   const currentPhrase = targetPhrases[currentPhraseIndex] || targetPhrases[0];
   const primaryTargetPhrase = currentPhrase.german;
+
+  const currentLinguisticAnalysis = useMemo(() => {
+    if (mode !== 'learn' || !currentPhrase?.german) return null;
+    return analyzeSentenceLinguistics(currentPhrase.german, currentPhrase.english || '');
+  }, [mode, currentPhrase]);
 
   // Scroll to bottom when turns update
   // (extended below to also scroll on live speech transcription)
@@ -632,17 +639,26 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
       if (dbSessionId) {
         finalRecap = await generateDiagnosticRecap(dbSessionId);
 
-        // Update session status to completed
+        // Update session status to completed with latest turns
         await supabase
           .from('sessions')
           .update({
             status: 'completed',
             completed_at: new Date().toISOString(),
+            transcript: turns,
           })
           .eq('id', dbSessionId);
 
-        // Record streak only if passed
+        // Record streak and unlock module in persistent local cache
         if (hasPassed) {
+          try {
+            const raw = localStorage.getItem('speechai_completed_modules');
+            const parsed = raw ? JSON.parse(raw) : [];
+            if (!parsed.includes(module.id)) {
+              parsed.push(module.id);
+              localStorage.setItem('speechai_completed_modules', JSON.stringify(parsed));
+            }
+          } catch (_) {}
           await recordSessionCompletionInStreak(user.id, true);
         }
       }
@@ -831,6 +847,16 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
               <p className="text-xs sm:text-sm text-slate-500 font-medium italic">
                 &ldquo;{currentPhrase.english}&rdquo;
               </p>
+
+              {/* Interactive Word Breakdown & Grammatical Structure in Learn Mode */}
+              {currentLinguisticAnalysis && (
+                <div className="pt-1">
+                  <LearnLinguisticStage
+                    analysis={currentLinguisticAnalysis}
+                    sessionHandle={sessionHandle}
+                  />
+                </div>
+              )}
 
               {/* Targeted Word Focus Alert */}
               {missedWords.length > 0 && currentPhraseUserTurn && !currentPhraseUserTurn.isCorrect && (
@@ -1028,29 +1054,29 @@ export const ActiveSession: React.FC<ActiveSessionProps> = ({
       </div>
 
       {/* Fixed Bottom Voice Status Dock with Automatic Turn-Taking & Voice-Turn Controls */}
-      <div className="shrink-0 z-10 pt-1 flex flex-col items-center gap-2">
-        <VoiceTurnControls
-          onSlower={handleSlower}
-          onRepeat={handleRepeat}
-          onHint={handleHint}
-          hintText={currentPhrase.english ? `Meaning: "${currentPhrase.english}"` : null}
-          showHint={mode === 'learn'}
-          disabled={voiceState === 'speaking' || isFinishing}
-        />
-        <AutoTurnStatusDock
-          voiceState={voiceState}
-          isUserSpeaking={isUserSpeaking}
-          isManualPaused={isManualPaused}
-          vadError={vadError}
-          volumeLevel={volumeLevel}
-          interimTranscript={interimTranscript}
-          onTogglePause={togglePause}
-          onManualSubmit={manualSubmit}
-          onManualStartSpeaking={manualStartSpeaking}
-          onRequestPermission={requestMicrophonePermission}
-          agentName="Coach"
-        />
-      </div>
+      <AutoTurnStatusDock
+        controlsSlot={
+          <VoiceTurnControls
+            onSlower={handleSlower}
+            onRepeat={handleRepeat}
+            onHint={handleHint}
+            hintText={currentPhrase?.english ? `Meaning: "${currentPhrase.english}"` : null}
+            showHint={mode === 'learn'}
+            disabled={voiceState === 'speaking' || isFinishing}
+          />
+        }
+        voiceState={voiceState}
+        isUserSpeaking={isUserSpeaking}
+        isManualPaused={isManualPaused}
+        vadError={vadError}
+        volumeLevel={volumeLevel}
+        interimTranscript={interimTranscript}
+        onTogglePause={togglePause}
+        onManualSubmit={manualSubmit}
+        onManualStartSpeaking={manualStartSpeaking}
+        onRequestPermission={requestMicrophonePermission}
+        agentName="Coach"
+      />
 
       {/* Completion Recap Modal */}
       {completedSummary && (

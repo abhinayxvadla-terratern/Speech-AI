@@ -151,7 +151,7 @@ export function useAutoTurnVAD({
       };
 
       recognition.onend = () => {
-        if (isUserSpeakingRef.current && recognitionRef.current) {
+        if (voiceStateRef.current === 'idle' && !isSendingAudioRef.current && recognitionRef.current) {
           try {
             recognitionRef.current.start();
           } catch (_) {}
@@ -239,11 +239,11 @@ export function useAutoTurnVAD({
     initSpeechRecognition();
 
     const vad = new VadManager({
-      redemptionMs: 1800,
-      positiveSpeechThreshold: 0.4,
-      negativeSpeechThreshold: 0.3,
-      preSpeechPadMs: 700,
-      minSpeechMs: 250,
+      redemptionMs: 1400,
+      positiveSpeechThreshold: 0.28,
+      negativeSpeechThreshold: 0.20,
+      preSpeechPadMs: 900,
+      minSpeechMs: 150,
       baseAssetPath: '/vad-assets/',
       onnxWASMBasePath: '/vad-assets/',
       onSpeechStart: () => {
@@ -277,6 +277,9 @@ export function useAutoTurnVAD({
         setIsUserSpeaking(false);
         isSendingAudioRef.current = true;
         setIsSendingAudio(true);
+
+        // Grace period (200ms) to allow browser's continuous STT result to finalize
+        await new Promise((r) => setTimeout(r, 200));
 
         if (recognitionRef.current) {
           try {
@@ -350,7 +353,7 @@ export function useAutoTurnVAD({
     };
   }, [sessionHandle, enabled, initSpeechRecognition, getMicStream, stopVolumeMeter]);
 
-  // Synchronize VAD listening with agent voiceState
+  // Synchronize VAD listening and speech recognition with agent voiceState
   useEffect(() => {
     const vad = vadManagerRef.current;
     if (!vad || !isVadInitialized || isManualPaused) return;
@@ -358,8 +361,18 @@ export function useAutoTurnVAD({
     if (voiceState === 'speaking' || voiceState === 'processing' || isSendingAudio) {
       vad.stopListening();
       setIsUserSpeaking(false);
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (_) {}
+      }
     } else if (voiceState === 'idle' && !isSendingAudio) {
       vad.startListening();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (_) {}
+      }
     }
   }, [voiceState, isVadInitialized, isManualPaused, isSendingAudio]);
 
